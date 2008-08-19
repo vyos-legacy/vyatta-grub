@@ -84,6 +84,9 @@ grub_machine_set_prefix (void)
     /* We already set prefix in grub_machine_init().  */
     return;
 
+#ifdef __i386__
+  grub_env_set ("prefix", "(sd,1)/");
+#else
   if (grub_ieee1275_get_property (grub_ieee1275_chosen, "bootpath", &bootpath,
 				  sizeof (bootpath), 0))
     {
@@ -121,6 +124,7 @@ grub_machine_set_prefix (void)
 
   grub_free (filename);
   grub_free (prefix);
+#endif
 }
 
 /* Claim some available memory in the first /memory node. */

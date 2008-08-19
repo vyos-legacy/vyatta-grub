@@ -538,6 +538,16 @@ read_device_map (const char *dev_map)
 	  continue;
 	}
 
+      if (! strncmp (p, "/dev/fd", sizeof ("/dev/fd") - 1))
+	{
+	  char *q = p + sizeof ("/dev/fd") - 1;
+	  if (*q >= '0' && *q <= '9')
+	    {
+	      grub_util_info ("`%s' looks like a floppy drive, skipping", p);
+	      continue;
+	    }
+	}
+
 #ifdef __linux__
       /* On Linux, the devfs uses symbolic links horribly, and that
 	 confuses the interface very much, so use realpath to expand
@@ -586,7 +596,7 @@ make_device_name (int drive, int dos_part, int bsd_part)
   sprintf (p, "%s", map[drive].drive);
   
   if (dos_part >= 0)
-    sprintf (p + strlen (p), ",%d", dos_part + 1);
+    sprintf (p + strlen (p), ",%d", dos_part + (getenv ("GRUB_LEGACY_0_BASED_PARTITIONS") ? 0 : 1));
   
   if (bsd_part >= 0)
     sprintf (p + strlen (p), ",%c", bsd_part + 'a');
