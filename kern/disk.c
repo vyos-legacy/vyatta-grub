@@ -341,18 +341,22 @@ grub_disk_adjust_range (grub_disk_t disk, grub_disk_addr_t *sector,
       start = grub_partition_get_start (disk->partition);
       len = grub_partition_get_len (disk->partition);
 
+#if 0
       if (*sector >= len
 	  || len - *sector < ((*offset + size + GRUB_DISK_SECTOR_SIZE - 1)
 			      >> GRUB_DISK_SECTOR_BITS))
 	return grub_error (GRUB_ERR_OUT_OF_RANGE, "out of partition");
+#endif
 
       *sector += start;
     }
 
+#if 0
   if (disk->total_sectors <= *sector
       || ((*offset + size + GRUB_DISK_SECTOR_SIZE - 1)
 	  >> GRUB_DISK_SECTOR_BITS) > disk->total_sectors - *sector)
     return grub_error (GRUB_ERR_OUT_OF_RANGE, "out of disk");
+#endif
 
   return GRUB_ERR_NONE;
 }
@@ -371,8 +375,8 @@ grub_disk_read (grub_disk_t disk, grub_disk_addr_t sector,
   if (grub_disk_adjust_range (disk, &sector, &offset, size) != GRUB_ERR_NONE)
     {
       grub_error_push ();
-      grub_dprintf ("disk", "Read out of range: sector 0x%llx (%s).\n",
-		    (unsigned long long) sector, grub_errmsg);
+      grub_dprintf ("disk", "Sector out of range: 0x%llx/0x%llx (%s).\n",
+		    (unsigned long long) sector+offset, disk->total_sectors, grub_errmsg);
       grub_error_pop ();
       return grub_errno;
     }

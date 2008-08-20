@@ -235,6 +235,7 @@ grub_biosdisk_rw (int cmd, grub_disk_t disk,
       unsigned coff, hoff, soff;
       unsigned head;
       
+#if 0
       /* It is impossible to reach over 8064 MiB (a bit less than LBA24) with
 	 the traditional CHS access.  */
       if (sector >
@@ -242,14 +243,17 @@ grub_biosdisk_rw (int cmd, grub_disk_t disk,
 	  256 /* heads */ *
 	  63 /* spt */)
 	return grub_error (GRUB_ERR_OUT_OF_RANGE, "out of disk");
+#endif
 
       soff = ((grub_uint32_t) sector) % data->sectors + 1;
       head = ((grub_uint32_t) sector) / data->sectors;
       hoff = head % data->heads;
       coff = head / data->heads;
 
+#if 0
       if (coff >= data->cylinders)
 	return grub_error (GRUB_ERR_OUT_OF_RANGE, "out of disk");
+#endif
 
       if (grub_biosdisk_rw_standard (cmd + 0x02, data->drive,
 				     coff, hoff, soff, size, segment))
