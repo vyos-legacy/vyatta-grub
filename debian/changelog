@@ -1,5 +1,7 @@
 grub2 (1.96+20080724-7-vyatta1) unstable; urgency=high
 
+  * Added vyatta to version string
+
  -- Rick Balocca <rbalocca@vyatta.com>  Mon, 25 Aug 2008 14:55:11 -0700
 
 grub2 (1.96+20080724-7) unstable; urgency=high
