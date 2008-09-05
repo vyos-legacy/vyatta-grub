@@ -459,7 +459,7 @@ grub_raid_scan_device (const char *name)
       array->version = sb.major_version;
       array->level = sb.level;
       array->layout = sb.layout;
-      array->total_devs = sb.nr_disks;
+      array->total_devs = sb.raid_disks;
       array->nr_devs = 0;
       array->uuid[0] = sb.set_uuid0;
       array->uuid[1] = sb.set_uuid1;
