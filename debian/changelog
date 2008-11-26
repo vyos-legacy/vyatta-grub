@@ -1,3 +1,28 @@
+grub2 (1.96+20080724-7-vyatta2) unstable; urgency=low
+
+	  3.2.0
+  [ Mark O'Brien ]
+
+
+  [ Bob Gilligan ]
+  * Bugfix: 3744
+  * Bugfix: 3663
+
+  [ Rick Balocca ]
+  * Add changelog comment
+
+  [ rbalocca ]
+  * Postfix "vyatta1" on the version.
+  * Fixes for https://bugzilla.vyatta.com/show_bug.cgi?id=3574 .
+  * Add more stamp-patches
+  * We're already patched
+  * Ignore some derived files
+  * Check in patched files, and so on
+
+  [ Mark O'Brien ]
+
+ -- Mark O'Brien <mobrien@firebolt.vyatta.com>  Tue, 25 Nov 2008 19:09:45 -0800
+
 grub2 (1.96+20080724-7-vyatta1) unstable; urgency=high
 
   * Added vyatta to version string
