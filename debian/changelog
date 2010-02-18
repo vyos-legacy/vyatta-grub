@@ -1,3 +1,9 @@
+grub2 (1.96+20080724-7-vyatta4+kenwood1) unstable; urgency=low
+
+  * UNRELEASED
+
+ -- An-Cheng Huang <ancheng@vyatta.com>  Wed, 17 Feb 2010 16:07:36 -0800
+
 grub2 (1.96+20080724-7-vyatta4) unstable; urgency=low
 
   * UNRELEASED
