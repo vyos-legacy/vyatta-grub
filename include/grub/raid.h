@@ -38,6 +38,7 @@ struct grub_raid_array
   grub_uint64_t disk_size; /* Size of an individual disk, in 512 byte
 			      sectors. */
   grub_disk_t device[32];  /* Array of total_devs devices. */          
+  grub_uint64_t events;	   /* Superblock update counter for the array. */
   struct grub_raid_array *next;
 };
 

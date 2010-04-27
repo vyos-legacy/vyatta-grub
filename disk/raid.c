@@ -91,7 +91,7 @@ static grub_err_t
 grub_raid_open (const char *name, grub_disk_t disk)
 {
   struct grub_raid_array *array;
-  
+
   for (array = array_list; array != NULL; array = array->next)
     {
       if (!grub_strcmp (array->name, name))
@@ -357,8 +357,9 @@ grub_raid_scan_device (const char *name)
   grub_uint64_t size;
   struct grub_raid_super_09 sb;
   struct grub_raid_array *p, *array = NULL;
+  grub_uint64_t sb_events;	/* events counter from disk superblock */
 
-  grub_dprintf ("raid", "Scanning for RAID devices\n");
+  grub_dprintf ("raid", "Scanning device %s for RAID\n", name);
 
   disk = grub_disk_open (name);
   if (!disk)
@@ -409,6 +410,9 @@ grub_raid_scan_device (const char *name)
       return 0;
     }
   
+  sb_events = ((grub_uint64_t)sb.events_lo & 0xffffffff) | 
+	  ((grub_uint64_t)sb.events_hi << 32);
+
   /* See whether the device is part of an array we have already seen a
      device from. */
   for (p = array_list; p != NULL; p = p->next)
@@ -446,6 +450,17 @@ grub_raid_scan_device (const char *name)
 	   this shouldn't happen.*/
 	grub_dprintf ("raid", "Found two disks with the number %d?!?",
 		      sb.this_disk.number);
+
+      if (sb_events < array->events) {
+	      /* This member is not fresh */
+	      grub_dprintf("raid", 
+			   "RAID: Array %s events = %lld, member %s events = %lld\n",
+			   array->name, array->events, name, sb_events);
+	      grub_dprintf("raid", "RAID: Member %s is not fresh.  Skipping it.\n",
+			   name);
+	      return 0;
+      }
+
     }
 
   /* Add an array to the list if we didn't find any.  */
@@ -468,6 +483,7 @@ grub_raid_scan_device (const char *name)
       /* The superblock specifies the size in 1024-byte sectors. */
       array->disk_size = sb.size * 2;
       array->chunk_size = sb.chunk_size / 512;
+      array->events = sb_events;
       
       /* Check whether we don't have multiple arrays with the same number. */
       for (p = array_list; p != NULL; p = p->next)
@@ -556,7 +572,25 @@ grub_raid_scan_device (const char *name)
       return 0;
     }
 
-  array->nr_devs++;
+  grub_dprintf("raid", 
+	       "RAID: Array %s events = %lld, member %s events = %lld\n",
+	       array->name, array->events, name, sb_events);
+  grub_dprintf("raid", "RAID: Member %s is fresh. Adding it.\n", name);
+
+  array->nr_devs++; /* For member just added */
+
+  if (sb_events > array->events) {
+	  unsigned int i = 0;
+
+	  grub_dprintf("raid", "RAID: Previous members are not fresh. Removing them.\n");
+	  /* Remove all the non-fresh members */
+	  for (i = 0; i < array->total_devs; i++)
+		  if ((i != sb.this_disk.number) && array->device[i]) {
+			  /* Should probably close the dev... */
+			  array->device[i] = 0;
+			  array->nr_devs--;
+		  }
+  }
   
   return 0;
 }
