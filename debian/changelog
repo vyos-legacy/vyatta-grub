@@ -1,3 +1,10 @@
+grub2 (1.96+20080724-7-vyatta6) unstable; urgency=low
+
+  * Bugfix 5399: Don't admit members that are not "fresh" to a RAID
+    array.
+
+ -- Bob Gilligan <gilligan@vyatta.com>  Tue, 27 Apr 2010 16:35:08 -0700
+
 grub2 (1.96+20080724-7-vyatta5) unstable; urgency=low
 
   * UNRELEASED
