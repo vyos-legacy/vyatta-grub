@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e 
+
+case "$1" in
+    install|upgrade)
+        # Make copy of current grub config file so that it can be
+	# restored after grub is configured.
+
+        cp /boot/grub/grub.cfg /tmp/grub-pc-install.orig_grub.cfg 
+
+        ;;
+
+    abort-upgrade)
+        ;;
+
+    *)
+        echo "preinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac

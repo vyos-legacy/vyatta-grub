@@ -56,6 +56,18 @@ case "$1" in
         cp $i /boot/grub/
       fi
     done
+
+    # The Vyatta system generates its own grub.cfg file.  So, we check
+    # here to see if the original grub.cfg was saved in the pre-install
+    # phase of installing this package.  If so, we restore it back to
+    # its original location, over-writing the version just generated.
+    if [ -e /tmp/grub-pc-install.orig_grub.cfg ]; then
+	echo "Restoring saved grub config file..."
+	cp /tmp/grub-pc-install.orig_grub.cfg /boot/grub/grub.cfg
+	echo "Deleting copy of original grub config file..."
+	rm -f /tmp/grub-pc-install.orig_grub.cfg
+    fi
+
   ;;
   abort-upgrade|abort-remove|abort-deconfigure)
   ;;
