@@ -7,7 +7,9 @@ case "$1" in
         # Make copy of current grub config file so that it can be
 	# restored after grub is configured.
 
-        cp /boot/grub/grub.cfg /tmp/grub-pc-install.orig_grub.cfg 
+        if [ -e /boot/grub/grub.cfg ]; then
+            cp /boot/grub/grub.cfg /tmp/grub-pc-install.orig_grub.cfg 
+	fi
 
         ;;
 
