@@ -1,3 +1,9 @@
+grub2 (1.96+20080724-7-vyatta8) unstable; urgency=low
+
+  * Don't fail pre-install script if grub config file doesn't exist.
+
+ -- Bob Gilligan <gilligan@vyatta.com>  Wed, 14 Jul 2010 17:00:02 -0700
+
 grub2 (1.96+20080724-7-vyatta7) unstable; urgency=low
 
   * Bugfix 5846: Save and restore original grub config file.
