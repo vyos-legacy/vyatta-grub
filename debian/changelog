@@ -1,3 +1,9 @@
+grub2 (1.96+20080724-7-vyatta9) unstable; urgency=low
+
+  * UNRELEASED
+
+ -- An-Cheng Huang <ancheng@vyatta.com>  Thu, 22 Jul 2010 17:24:20 -0700
+
 grub2 (1.96+20080724-7-vyatta8) unstable; urgency=low
 
   * Don't fail pre-install script if grub config file doesn't exist.
