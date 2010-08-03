@@ -1,3 +1,10 @@
+grub2 (1.96+20080724-7-vyatta10) unstable; urgency=low
+
+  * Bugfix 5851: Don't run update-grub if restoring previous grub.cfg
+    file.
+
+ -- Bob Gilligan <gilligan@vyatta.com>  Mon, 02 Aug 2010 17:56:53 -0700
+
 grub2 (1.96+20080724-7-vyatta9) unstable; urgency=low
 
   * UNRELEASED
