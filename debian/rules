@@ -7,7 +7,6 @@ DEB_DH_GENCONTROL_ARGS_ALL = $(shell if [ -f "../.VYATTA_DEV_BUILD" ]; then \
                                        echo "-- -v999.dev"; fi)
 
 include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/rules/simple-patchsys.mk
 
 CFLAGS := -g -Wall
 
@@ -93,31 +92,8 @@ install/grub-pc install/grub-efi install/grub-ieee1275 install/grub-linuxbios::
 		| sed -e "s%.*%$(subst install/,,$@): statically-linked-binary &%g" \
 	>> $(CURDIR)/debian/$(subst install/,,$@)/usr/share/lintian/overrides/$(subst install/,,$@)
 
-clean:: debian/legacy/update-grub
+clean::
 	chmod +x debian/{script,grub.d/*,legacy/*}
 	-rm -f debian/grub-{pc,efi,ieee1275,linuxbios}.docs debian/grub-pc.substvars
 	-rm -rf build
 
-	# make sure PO files are always up-to-date
-	debconf-updatepo
-
-debian/legacy/update-grub:
-	svn cat svn://svn.debian.org/pkg-grub/grub/trunk/debian/update-grub > $@
-	chmod +x $@
-
-# Grab fixes from SVN using our version as reference.
-svn-sync:
-	svn co svn://svn.sv.gnu.org/grub/trunk/grub2 grub2-svn; \
-	UVERSION=$$(dpkg-parsechangelog | grep Version \
-	                                | sed 's,Version: ,,g;s,-[0-9]*$$,,g;s,\.,_,g'); \
-	cd grub2-svn && \
-	svn diff -uN -r release_$$UVERSION -r HEAD > ../debian/patches/00_svn-sync.patch; \
-	cd .. && rm -rf grub2-svn
-
-svn-snapshot:
-	UVERSION=$$(dpkg-parsechangelog | grep Version \
-	                                | sed 's,Version: ,,g;s,-[0-9]*$$,,g'); \
-	svn co svn://svn.sv.gnu.org/grub/trunk/grub2 export -d grub2-$$UVERSION -rHEAD grub2; \
-	tar -czf grub2_$$UVERSION.orig.tar.gz grub2-$$UVERSION; \
-	rm -rf grub2-$$UVERSION; \
-	mv grub2_$$UVERSION.orig.tar.gz ../tarballs/
