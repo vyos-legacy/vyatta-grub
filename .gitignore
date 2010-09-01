@@ -8,11 +8,15 @@ autom4te.cache
 autom4te.cache
 build
 config.cache
+config.guess
 config.guess.cdbs-orig
 config.h
+config.h.in
 config.log
 config.status
+config.sub
 config.sub.cdbs-orig
+configure
 *.d
 debian/files
 debian/grub2
@@ -34,6 +38,7 @@ debian/grub-pc.docs
 debian/grub-pc.postrm.debhelper
 debian/grub-pc.substvars
 debian/grub-rescue-pc
+debian/grub-rescue-pc.substvars
 debian/*.log
 debian/patches/*.log
 *.exec

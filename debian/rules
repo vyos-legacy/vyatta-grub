@@ -36,7 +36,7 @@ configure/grub-pc configure/grub-ieee1275 configure/grub-efi configure/grub-linu
 	mkdir -p $(subst configure/,build/,$@)
 	cd $(subst configure/,build/,$@) && $(CONFIGURE) --with-platform=$(subst configure/grub-,,$@)
 
-configure/grub-common::
+configure/grub-common:: $(AUTOGEN_FILES)
 	mkdir -p build/grub-common
 	cd build/grub-common && $(CONFIGURE)
 
