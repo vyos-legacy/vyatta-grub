@@ -1,3 +1,11 @@
+grub2 (1.96+20080724-7-vyatta11) unstable; urgency=low
+
+  * clean up build
+  * more cleanup
+  * remove unused packages
+
+ -- An-Cheng Huang <ancheng@vyatta.com>  Wed, 01 Sep 2010 15:13:05 -0700
+
 grub2 (1.96+20080724-7-vyatta10) unstable; urgency=low
 
   * Bugfix 5851: Don't run update-grub if restoring previous grub.cfg
