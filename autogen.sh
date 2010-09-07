@@ -20,6 +20,11 @@ for rmk in conf/*.rmk ${GRUB_CONTRIB}/*/conf/*.rmk; do
     ruby genmk.rb < $rmk > `echo $rmk | sed 's/\.rmk$/.mk/'`
   fi
 done
+
 sh gendistlist.sh > DISTLIST
+
+rm -f config.sub config.guess
+ln -s /usr/share/misc/config.sub .
+ln -s /usr/share/misc/config.guess .
 
 exit 0

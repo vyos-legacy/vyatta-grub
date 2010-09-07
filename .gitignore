@@ -9,13 +9,11 @@ autom4te.cache
 build
 config.cache
 config.guess
-config.guess.cdbs-orig
 config.h
 config.h.in
 config.log
 config.status
 config.sub
-config.sub.cdbs-orig
 configure
 *.d
 debian/files
