@@ -1,7 +1,7 @@
 /* nand.c - NAND flash disk access.  */
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2008 Free Software Foundation, Inc.
+ *  Copyright (C) 2008,2009 Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -44,8 +44,7 @@ grub_nand_iterate (int (*hook) (const char *name))
       return 0;
     }
 
-  grub_devalias_iterate (dev_iterate);
-  return 0;
+  return grub_devalias_iterate (dev_iterate);
 }
 
 static grub_err_t
@@ -60,15 +59,15 @@ grub_nand_open (const char *name, grub_disk_t disk)
   struct size_args
     {
       struct grub_ieee1275_common_hdr common;
-      char *method;
-      grub_ieee1275_ihandle_t ihandle;
+      grub_ieee1275_cell_t method;
+      grub_ieee1275_cell_t ihandle;
       grub_ieee1275_cell_t result;
       grub_ieee1275_cell_t size1;
       grub_ieee1275_cell_t size2;
     } args;
 
   if (! grub_strstr (name, "nand"))
-    return  grub_error (GRUB_ERR_UNKNOWN_DEVICE, "Not a nand device");
+    return  grub_error (GRUB_ERR_UNKNOWN_DEVICE, "not a NAND device");
 
   data = grub_malloc (sizeof (*data));
   if (! data)
@@ -77,33 +76,33 @@ grub_nand_open (const char *name, grub_disk_t disk)
   grub_ieee1275_open (name, &dev_ihandle);
   if (! dev_ihandle)
     {
-      grub_error (GRUB_ERR_UNKNOWN_DEVICE, "Can't open device");
+      grub_error (GRUB_ERR_UNKNOWN_DEVICE, "can't open device");
       goto fail;
     }
 
   data->handle = dev_ihandle;
 
   INIT_IEEE1275_COMMON (&args.common, "call-method", 2, 2);
-  args.method = "block-size";
+  args.method = (grub_ieee1275_cell_t) "block-size";
   args.ihandle = dev_ihandle;
   args.result = 1;
 
   if ((IEEE1275_CALL_ENTRY_FN (&args) == -1) || (args.result))
     {
-      grub_error (GRUB_ERR_UNKNOWN_DEVICE, "Can't get block size");
+      grub_error (GRUB_ERR_UNKNOWN_DEVICE, "can't get block size");
       goto fail;
     }
 
   data->block_size = (args.size1 >> GRUB_DISK_SECTOR_BITS);
 
   INIT_IEEE1275_COMMON (&args.common, "call-method", 2, 3);
-  args.method = "size";
+  args.method = (grub_ieee1275_cell_t) "size";
   args.ihandle = dev_ihandle;
   args.result = 1;
 
   if ((IEEE1275_CALL_ENTRY_FN (&args) == -1) || (args.result))
     {
-      grub_error (GRUB_ERR_UNKNOWN_DEVICE, "Can't get disk size");
+      grub_error (GRUB_ERR_UNKNOWN_DEVICE, "can't get disk size");
       goto fail;
     }
 
@@ -143,8 +142,8 @@ grub_nand_read (grub_disk_t disk, grub_disk_addr_t sector,
   struct read_args
     {
       struct grub_ieee1275_common_hdr common;
-      char *method;
-      grub_ieee1275_ihandle_t ihandle;
+      grub_ieee1275_cell_t method;
+      grub_ieee1275_cell_t ihandle;
       grub_ieee1275_cell_t ofs;
       grub_ieee1275_cell_t page;
       grub_ieee1275_cell_t len;
@@ -153,7 +152,7 @@ grub_nand_read (grub_disk_t disk, grub_disk_addr_t sector,
     } args;
 
   INIT_IEEE1275_COMMON (&args.common, "call-method", 6, 1);
-  args.method = "pio-read";
+  args.method = (grub_ieee1275_cell_t) "pio-read";
   args.ihandle = data->handle;
   args.buf = (grub_ieee1275_cell_t) buf;
   args.page = (grub_ieee1275_cell_t) ((grub_size_t) sector / data->block_size);
@@ -173,7 +172,7 @@ grub_nand_read (grub_disk_t disk, grub_disk_addr_t sector,
       args.result = 1;
 
       if ((IEEE1275_CALL_ENTRY_FN (&args) == -1) || (args.result))
-        return grub_error (GRUB_ERR_READ_ERROR, "Read error");
+        return grub_error (GRUB_ERR_READ_ERROR, "read error");
 
       ofs = 0;
       size -= len;

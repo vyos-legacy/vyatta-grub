@@ -1,7 +1,7 @@
 /* grub-probe.c - probe device information for a given path */
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2005,2006,2007,2008 Free Software Foundation, Inc.
+ *  Copyright (C) 2005,2006,2007,2008,2009,2010  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,16 +20,19 @@
 #include <config.h>
 #include <grub/types.h>
 #include <grub/util/misc.h>
+#include <grub/util/misc.h>
 #include <grub/device.h>
 #include <grub/disk.h>
 #include <grub/file.h>
 #include <grub/fs.h>
 #include <grub/partition.h>
-#include <grub/pc_partition.h>
-#include <grub/util/biosdisk.h>
-#include <grub/util/getroot.h>
+#include <grub/msdos_partition.h>
+#include <grub/emu/hostdisk.h>
+#include <grub/emu/getroot.h>
 #include <grub/term.h>
 #include <grub/env.h>
+#include <grub/raid.h>
+#include <grub/i18n.h>
 
 #include <grub_probe_init.h>
 
@@ -42,9 +45,12 @@
 #define _GNU_SOURCE	1
 #include <getopt.h>
 
+#include "progname.h"
+
 enum {
   PRINT_FS,
   PRINT_FS_UUID,
+  PRINT_FS_LABEL,
   PRINT_DRIVE,
   PRINT_DEVICE,
   PRINT_PARTMAP,
@@ -54,22 +60,18 @@ enum {
 int print = PRINT_FS;
 static unsigned int argument_is_device = 0;
 
-void
-grub_putchar (int c)
+void 
+grub_xputs_real (const char *str)
 {
-  putchar (c);
+  fputs (str, stdout);
 }
+
+void (*grub_xputs) (const char *str) = grub_xputs_real;
 
 int
 grub_getkey (void)
 {
   return -1;
-}
-
-grub_term_t
-grub_term_get_current (void)
-{
-  return 0;
 }
 
 void
@@ -81,26 +83,30 @@ grub_refresh (void)
 static void
 probe_partmap (grub_disk_t disk)
 {
-  char *name;
-  char *underscore;
-  
+  grub_partition_t part;
+
   if (disk->partition == NULL)
     {
-      grub_util_info ("No partition map found for %s", disk->name);
+      grub_util_info ("no partition map found for %s", disk->name);
       return;
     }
-  
-  name = strdup (disk->partition->partmap->name);
-  if (! name)
-    grub_util_error ("Not enough memory");
-  
-  underscore = strchr (name, '_');
-  if (! underscore)
-    grub_util_error ("Invalid partition map %s", name);
-  
-  *underscore = '\0';
-  printf ("%s\n", name);
-  free (name);
+
+  for (part = disk->partition; part; part = part->parent)
+    printf ("%s\n", part->partmap->name);
+}
+
+static int
+probe_raid_level (grub_disk_t disk)
+{
+  /* disk might be NULL in the case of a LVM physical volume with no LVM
+     signature.  Ignore such cases here.  */
+  if (!disk)
+    return -1;
+
+  if (disk->dev->id != GRUB_DISK_DEVICE_RAID_ID)
+    return -1;
+
+  return ((struct grub_raid_array *) disk->data)->level;
 }
 
 static void
@@ -109,20 +115,24 @@ probe (const char *path, char *device_name)
   char *drive_name = NULL;
   char *grub_path = NULL;
   char *filebuf_via_grub = NULL, *filebuf_via_sys = NULL;
-  int abstraction_type;
   grub_device_t dev = NULL;
   grub_fs_t fs;
-  
+
   if (path == NULL)
     {
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
+      if (! grub_util_check_char_device (device_name))
+        grub_util_error ("%s is not a character device", device_name);
+#else
       if (! grub_util_check_block_device (device_name))
-        grub_util_error ("%s is not a block device.\n", device_name);
+        grub_util_error ("%s is not a block device", device_name);
+#endif
     }
   else
     device_name = grub_guess_root_device (path);
 
   if (! device_name)
-    grub_util_error ("cannot find a device for %s.\n", path);
+    grub_util_error ("cannot find a device for %s (is /dev mounted?)", path);
 
   if (print == PRINT_DEVICE)
     {
@@ -130,32 +140,10 @@ probe (const char *path, char *device_name)
       goto end;
     }
 
-  abstraction_type = grub_util_get_dev_abstraction (device_name);
-  /* No need to check for errors; lack of abstraction is permissible.  */
-  
-  if (print == PRINT_ABSTRACTION)
-    {
-      char *abstraction_name;
-      switch (abstraction_type)
-	{
-	case GRUB_DEV_ABSTRACTION_LVM:
-	  abstraction_name = "lvm";
-	  break;
-	case GRUB_DEV_ABSTRACTION_RAID:
-	  abstraction_name = "raid";
-	  break;
-	default:
-	  grub_util_info ("did not find LVM/RAID in %s, assuming raw device", device_name);
-	  goto end;
-	}
-      printf ("%s\n", abstraction_name);
-      goto end;
-    }
-
   drive_name = grub_util_get_grub_dev (device_name);
   if (! drive_name)
-    grub_util_error ("Cannot find a GRUB drive for %s.  Check your device.map.\n", device_name);
-  
+    grub_util_error ("cannot find a GRUB drive for %s.  Check your device.map", device_name);
+
   if (print == PRINT_DRIVE)
     {
       printf ("(%s)\n", drive_name);
@@ -166,6 +154,58 @@ probe (const char *path, char *device_name)
   dev = grub_device_open (drive_name);
   if (! dev)
     grub_util_error ("%s", grub_errmsg);
+
+  if (print == PRINT_ABSTRACTION)
+    {
+      grub_disk_memberlist_t list = NULL, tmp;
+      const int is_lvm = (dev->disk->dev->id == GRUB_DISK_DEVICE_LVM_ID);
+      int is_raid = 0;
+      int is_raid5 = 0;
+      int is_raid6 = 0;
+      int raid_level;
+
+      raid_level = probe_raid_level (dev->disk);
+      if (raid_level >= 0)
+	{
+	  is_raid = 1;
+	  is_raid5 |= (raid_level == 5);
+	  is_raid6 |= (raid_level == 6);
+	}
+
+      if ((is_lvm) && (dev->disk->dev->memberlist))
+	list = dev->disk->dev->memberlist (dev->disk);
+      while (list)
+	{
+	  raid_level = probe_raid_level (list->disk);
+	  if (raid_level >= 0)
+	    {
+	      is_raid = 1;
+	      is_raid5 |= (raid_level == 5);
+	      is_raid6 |= (raid_level == 6);
+	    }
+
+	  tmp = list->next;
+	  free (list);
+	  list = tmp;
+	}
+
+      if (is_raid)
+	{
+	  printf ("raid ");
+	  if (is_raid5)
+	    printf ("raid5rec ");
+	  if (is_raid6)
+	    printf ("raid6rec ");
+	  printf ("mdraid ");
+	}
+
+      if (is_lvm)
+	printf ("lvm ");
+
+      printf ("\n");
+
+      goto end;
+    }
 
   if (print == PRINT_PARTMAP)
     {
@@ -180,6 +220,20 @@ probe (const char *path, char *device_name)
       while (list)
 	{
 	  probe_partmap (list->disk);
+	  /* LVM on RAID  */
+	  if (list->disk->dev->memberlist)
+	    {
+	      grub_disk_memberlist_t sub_list;
+
+	      sub_list = list->disk->dev->memberlist (list->disk);
+	      while (sub_list)
+		{
+		  probe_partmap (sub_list->disk);
+		  tmp = sub_list->next;
+		  free (sub_list);
+		  sub_list = tmp;
+		}
+	    }
 	  tmp = list->next;
 	  free (list);
 	  list = tmp;
@@ -193,29 +247,38 @@ probe (const char *path, char *device_name)
 
   if (print == PRINT_FS)
     {
-      struct stat st;
+      if (path)
+        {
+	  struct stat st;
 
-      stat (path, &st);
+	  stat (path, &st);
 
-      if (st.st_mode == S_IFREG)
-	{
-	  /* Regular file.  Verify that we can read it properly.  */
+	  if (S_ISREG (st.st_mode))
+	    {
+	      /* Regular file.  Verify that we can read it properly.  */
 
-	  grub_file_t file;
-	  grub_util_info ("reading %s via OS facilities", path);
-	  filebuf_via_sys = grub_util_read_image (path);
-	  
-	  grub_util_info ("reading %s via GRUB facilities", path);
-	  asprintf (&grub_path, "(%s)%s", drive_name, path);
-	  file = grub_file_open (grub_path);
-	  filebuf_via_grub = xmalloc (file->size);
-	  grub_file_read (file, filebuf_via_grub, file->size);
-	  
-	  grub_util_info ("comparing");
-	  
-	  if (memcmp (filebuf_via_grub, filebuf_via_sys, file->size))
-	    grub_util_error ("files differ");
+	      grub_file_t file;
+	      char *rel_path;
+	      grub_util_info ("reading %s via OS facilities", path);
+	      filebuf_via_sys = grub_util_read_image (path);
+
+	      rel_path = grub_make_system_path_relative_to_its_root (path);
+	      grub_path = xasprintf ("(%s)%s", drive_name, rel_path);
+	      free (rel_path);
+	      grub_util_info ("reading %s via GRUB facilities", grub_path);
+	      file = grub_file_open (grub_path);
+	      if (! file)
+		grub_util_error ("cannot open %s via GRUB facilities", grub_path);
+	      filebuf_via_grub = xmalloc (file->size);
+	      grub_file_read (file, filebuf_via_grub, file->size);
+
+	      grub_util_info ("comparing");
+
+	      if (memcmp (filebuf_via_grub, filebuf_via_sys, file->size))
+		grub_util_error ("files differ");
+	    }
 	}
+
       printf ("%s\n", fs->name);
     }
 
@@ -228,6 +291,16 @@ probe (const char *path, char *device_name)
       fs->uuid (dev, &uuid);
 
       printf ("%s\n", uuid);
+    }
+  else if (print == PRINT_FS_LABEL)
+    {
+      char *label;
+      if (! fs->label)
+	grub_util_error ("%s does not support labels", fs->name);
+
+      fs->label (dev, &label);
+
+      printf ("%s\n", label);
     }
 
  end:
@@ -255,25 +328,25 @@ usage (int status)
 {
   if (status)
     fprintf (stderr,
-	     "Try ``grub-probe --help'' for more information.\n");
+	     "Try `%s --help' for more information.\n", program_name);
   else
     printf ("\
-Usage: grub-probe [OPTION]... [PATH|DEVICE]\n\
+Usage: %s [OPTION]... [PATH|DEVICE]\n\
 \n\
 Probe device information for a given path (or device, if the -d option is given).\n\
 \n\
   -d, --device              given argument is a system device, not a path\n\
   -m, --device-map=FILE     use FILE as the device map [default=%s]\n\
-  -t, --target=(fs|fs_uuid|drive|device|partmap|abstraction)\n\
+  -t, --target=(fs|fs_uuid|fs_label|drive|device|partmap|abstraction)\n\
                             print filesystem module, GRUB drive, system device, partition map module or abstraction module [default=fs]\n\
   -h, --help                display this message and exit\n\
   -V, --version             print version information and exit\n\
   -v, --verbose             print verbose messages\n\
 \n\
 Report bugs to <%s>.\n\
-",
+", program_name,
 	    DEFAULT_DEVICE_MAP, PACKAGE_BUGREPORT);
-  
+
   exit (status);
 }
 
@@ -282,14 +355,16 @@ main (int argc, char *argv[])
 {
   char *dev_map = 0;
   char *argument;
-  
-  progname = "grub-probe";
-  
+
+  set_program_name (argv[0]);
+
+  grub_util_init_nls ();
+
   /* Check for options.  */
   while (1)
     {
       int c = getopt_long (argc, argv, "dm:t:hVv", options, 0);
-      
+
       if (c == -1)
 	break;
       else
@@ -311,6 +386,8 @@ main (int argc, char *argv[])
 	      print = PRINT_FS;
 	    else if (!strcmp (optarg, "fs_uuid"))
 	      print = PRINT_FS_UUID;
+	    else if (!strcmp (optarg, "fs_label"))
+	      print = PRINT_FS_LABEL;
 	    else if (!strcmp (optarg, "drive"))
 	      print = PRINT_DRIVE;
 	    else if (!strcmp (optarg, "device"))
@@ -328,7 +405,7 @@ main (int argc, char *argv[])
 	    break;
 
 	  case 'V':
-	    printf ("%s (%s) %s\n", progname, PACKAGE_NAME, PACKAGE_VERSION);
+	    printf ("%s (%s) %s\n", program_name, PACKAGE_NAME, PACKAGE_VERSION);
 	    return 0;
 
 	  case 'v':
@@ -358,10 +435,10 @@ main (int argc, char *argv[])
     }
 
   argument = argv[optind];
-  
+
   /* Initialize the emulated biosdisk driver.  */
   grub_util_biosdisk_init (dev_map ? : DEFAULT_DEVICE_MAP);
-  
+
   /* Initialize all modules. */
   grub_init_all ();
 
@@ -370,12 +447,12 @@ main (int argc, char *argv[])
     probe (NULL, argument);
   else
     probe (argument, NULL);
-  
+
   /* Free resources.  */
   grub_fini_all ();
   grub_util_biosdisk_fini ();
-  
+
   free (dev_map);
-  
+
   return 0;
 }

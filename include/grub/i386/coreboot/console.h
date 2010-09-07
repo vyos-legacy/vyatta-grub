@@ -1,6 +1,6 @@
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2008  Free Software Foundation, Inc.
+ *  Copyright (C) 2009  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
  *  along with GRUB.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _GRUB_CONSOLE_MACHINE_LB_HEADER
-#define _GRUB_CONSOLE_MACHINE_LB_HEADER 1
-#include <grub/i386/pc/console.h>
+#ifndef GRUB_MACHINE_CONSOLE_HEADER
+#define GRUB_MACHINE_CONSOLE_HEADER	1
 
-void grub_keyboard_controller_init (void);
+void grub_vga_text_init (void);
+void grub_vga_text_fini (void);
 
-#endif /* ! _GRUB_CONSOLE_MACHINE_LB_HEADER */
+#endif /* ! GRUB_MACHINE_CONSOLE_HEADER */

@@ -1,7 +1,7 @@
 /* linux.c - boot Linux zImage or bzImage */
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 1999,2000,2001,2002,2003,2004,2005,2007,2008  Free Software Foundation, Inc.
+ *  Copyright (C) 1999,2000,2001,2002,2003,2004,2005,2007,2008,2009,2010  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,13 +25,14 @@
 #include <grub/disk.h>
 #include <grub/misc.h>
 #include <grub/types.h>
-#include <grub/rescue.h>
 #include <grub/mm.h>
 #include <grub/dl.h>
 #include <grub/env.h>
 #include <grub/term.h>
 #include <grub/cpu/linux.h>
 #include <grub/ieee1275/ieee1275.h>
+#include <grub/command.h>
+#include <grub/i18n.h>
 
 #define GRUB_OFW_LINUX_PARAMS_ADDR	0x90000
 #define GRUB_OFW_LINUX_KERNEL_ADDR	0x100000
@@ -100,7 +101,7 @@ grub_linux_boot (void)
 
   grub_memset ((char *) params, 0, GRUB_OFW_LINUX_CL_OFFSET);
 
-  params->alt_mem = grub_upper_mem >> 10;
+  params->alt_mem = grub_mmap_get_upper () >> 10;
   params->ext_mem = params->alt_mem;
 
   lh->cmd_line_ptr = (char *)
@@ -109,8 +110,29 @@ grub_linux_boot (void)
   params->cl_magic = GRUB_LINUX_CL_MAGIC;
   params->cl_offset = GRUB_OFW_LINUX_CL_OFFSET;
 
-  params->video_width = (grub_getwh () >> 8);
-  params->video_height = (grub_getwh () & 0xff);
+  {
+    grub_term_output_t term;
+    int found = 0;
+    FOR_ACTIVE_TERM_OUTPUTS(term)
+      if (grub_strcmp (term->name, "ofconsole") == 0)
+        {
+          grub_uint16_t pos = grub_term_getxy (term);
+          params->video_cursor_x = pos >> 8;
+          params->video_cursor_y = pos & 0xff;
+          params->video_width = grub_term_width (term);
+          params->video_height = grub_term_height (term);
+          found = 1;
+          break;
+        }
+    if (!found)
+      {
+        params->video_cursor_x = 0;
+        params->video_cursor_y = 0;
+        params->video_width = 80;
+        params->video_height = 25;
+      }
+  }
+
   params->font_size = 16;
 
   params->ofw_signature = GRUB_LINUX_OFW_SIGNATURE;
@@ -140,8 +162,9 @@ grub_linux_boot (void)
   return GRUB_ERR_NONE;
 }
 
-void
-grub_rescue_cmd_linux (int argc, char *argv[])
+static grub_err_t
+grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
+		int argc, char *argv[])
 {
   grub_file_t file = 0;
   struct linux_kernel_header lh;
@@ -162,9 +185,9 @@ grub_rescue_cmd_linux (int argc, char *argv[])
   if (! file)
     goto fail;
 
-  if (grub_file_read (file, (char *) &lh, sizeof (lh)) != sizeof (lh))
+  if (grub_file_read (file, &lh, sizeof (lh)) != sizeof (lh))
     {
-      grub_error (GRUB_ERR_READ_ERROR, "cannot read the linux header");
+      grub_error (GRUB_ERR_READ_ERROR, "cannot read the Linux header");
       goto fail;
     }
 
@@ -182,8 +205,8 @@ grub_rescue_cmd_linux (int argc, char *argv[])
   real_size = setup_sects << GRUB_DISK_SECTOR_BITS;
   prot_size = grub_file_size (file) - real_size - GRUB_DISK_SECTOR_SIZE;
 
-  grub_printf ("   [Linux-%s, setup=0x%x, size=0x%x]\n",
-               "bzImage", real_size, prot_size);
+  grub_dprintf ("linux", "Linux-%s, setup=0x%x, size=0x%x\n",
+		"bzImage", real_size, prot_size);
 
   grub_file_seek (file, real_size + GRUB_DISK_SECTOR_SIZE);
   if (grub_errno)
@@ -210,7 +233,7 @@ grub_rescue_cmd_linux (int argc, char *argv[])
 
   kernel_size = prot_size;
   if (grub_file_read (file, kernel_addr, prot_size) != (int) prot_size)
-    grub_error (GRUB_ERR_FILE_READ_ERROR, "Couldn't read file");
+    grub_error (GRUB_ERR_FILE_READ_ERROR, "couldn't read file");
 
   if (grub_errno == GRUB_ERR_NONE)
     grub_loader_set (grub_linux_boot, grub_linux_unload, 1);
@@ -229,22 +252,25 @@ fail:
 
       grub_dl_unref (my_mod);
     }
+
+  return grub_errno;
 }
 
-void
-grub_rescue_cmd_initrd (int argc, char *argv[])
+static grub_err_t
+grub_cmd_initrd (grub_command_t cmd __attribute__ ((unused)),
+		 int argc, char *argv[])
 {
   grub_file_t file = 0;
 
   if (argc == 0)
     {
-      grub_error (GRUB_ERR_BAD_ARGUMENT, "No module specified");
+      grub_error (GRUB_ERR_BAD_ARGUMENT, "no module specified");
       goto fail;
     }
 
   if (! kernel_addr)
     {
-      grub_error (GRUB_ERR_BAD_ARGUMENT, "You need to load the kernel first.");
+      grub_error (GRUB_ERR_BAD_ARGUMENT, "you need to load the kernel first");
       goto fail;
     }
 
@@ -253,31 +279,33 @@ grub_rescue_cmd_initrd (int argc, char *argv[])
     goto fail;
 
   initrd_size = grub_file_size (file);
-  if (grub_file_read (file, (char *) GRUB_OFW_LINUX_INITRD_ADDR,
+  if (grub_file_read (file, (void *) GRUB_OFW_LINUX_INITRD_ADDR,
                       initrd_size) != (int) initrd_size)
     {
-      grub_error (GRUB_ERR_FILE_READ_ERROR, "Couldn't read file");
+      grub_error (GRUB_ERR_FILE_READ_ERROR, "couldn't read file");
       goto fail;
     }
 
 fail:
   if (file)
     grub_file_close (file);
+
+  return grub_errno;
 }
+
+static grub_command_t cmd_linux, cmd_initrd;
 
 GRUB_MOD_INIT(linux)
 {
-  grub_rescue_register_command ("linux",
-				grub_rescue_cmd_linux,
-				"load linux");
-  grub_rescue_register_command ("initrd",
-				grub_rescue_cmd_initrd,
-				"load initrd");
+  cmd_linux = grub_register_command ("linux", grub_cmd_linux,
+				     0, N_("Load Linux."));
+  cmd_initrd = grub_register_command ("initrd", grub_cmd_initrd,
+				      0, N_("Load initrd."));
   my_mod = mod;
 }
 
 GRUB_MOD_FINI(linux)
 {
-  grub_rescue_unregister_command ("linux");
-  grub_rescue_unregister_command ("initrd");
+  grub_unregister_command (cmd_linux);
+  grub_unregister_command (cmd_initrd);
 }

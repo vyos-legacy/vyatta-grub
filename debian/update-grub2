@@ -1,2 +1,3 @@
-#!/bin/sh -e
-exec update-grub
+#!/bin/sh
+set -e
+exec update-grub "$@"

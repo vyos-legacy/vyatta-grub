@@ -1,7 +1,7 @@
 /* efi.c - generic EFI support */
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2006,2007,2008  Free Software Foundation, Inc.
+ *  Copyright (C) 2006,2007,2008,2009,2010  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
  */
 
 #include <grub/misc.h>
+#include <grub/charset.h>
 #include <grub/efi/api.h>
 #include <grub/efi/efi.h>
 #include <grub/efi/console_control.h>
@@ -42,12 +43,12 @@ grub_efi_locate_protocol (grub_efi_guid_t *protocol, void *registration)
 {
   void *interface;
   grub_efi_status_t status;
-  
+
   status = efi_call_3 (grub_efi_system_table->boot_services->locate_protocol,
                        protocol, registration, &interface);
   if (status != GRUB_EFI_SUCCESS)
     return 0;
-  
+
   return interface;
 }
 
@@ -64,11 +65,11 @@ grub_efi_locate_handle (grub_efi_locate_search_type_t search_type,
   grub_efi_status_t status;
   grub_efi_handle_t *buffer;
   grub_efi_uintn_t buffer_size = 8 * sizeof (grub_efi_handle_t);
-  
+
   buffer = grub_malloc (buffer_size);
   if (! buffer)
     return 0;
-  
+
   b = grub_efi_system_table->boot_services;
   status = efi_call_5 (b->locate_handle, search_type, protocol, search_key,
 			     &buffer_size, buffer);
@@ -78,7 +79,7 @@ grub_efi_locate_handle (grub_efi_locate_search_type_t search_type,
       buffer = grub_malloc (buffer_size);
       if (! buffer)
 	return 0;
-      
+
       status = efi_call_5 (b->locate_handle, search_type, protocol, search_key,
 				 &buffer_size, buffer);
     }
@@ -101,7 +102,7 @@ grub_efi_open_protocol (grub_efi_handle_t handle,
   grub_efi_boot_services_t *b;
   grub_efi_status_t status;
   void *interface;
-  
+
   b = grub_efi_system_table->boot_services;
   status = efi_call_6 (b->open_protocol, handle,
 		       protocol,
@@ -126,7 +127,7 @@ grub_efi_set_text_mode (int on)
     /* No console control protocol instance available, assume it is
        already in text mode. */
     return 1;
-  
+
   if (efi_call_4 (c->get_mode, c, &mode, 0, 0) != GRUB_EFI_SUCCESS)
     return 0;
 
@@ -158,15 +159,20 @@ grub_exit (void)
   grub_efi_fini ();
   efi_call_4 (grub_efi_system_table->boot_services->exit,
               grub_efi_image_handle, GRUB_EFI_SUCCESS, 0, 0);
+  for (;;) ;
 }
 
+/* On i386, a firmware-independant grub_reboot() is provided by realmode.S.  */
+#ifndef __i386__
 void
 grub_reboot (void)
 {
   grub_efi_fini ();
   efi_call_4 (grub_efi_system_table->runtime_services->reset_system,
               GRUB_EFI_RESET_COLD, GRUB_EFI_SUCCESS, 0, NULL);
+  for (;;) ;
 }
+#endif
 
 void
 grub_halt (void)
@@ -174,6 +180,7 @@ grub_halt (void)
   grub_efi_fini ();
   efi_call_4 (grub_efi_system_table->runtime_services->reset_system,
               GRUB_EFI_RESET_SHUTDOWN, GRUB_EFI_SUCCESS, 0, NULL);
+  for (;;) ;
 }
 
 int
@@ -181,10 +188,29 @@ grub_efi_exit_boot_services (grub_efi_uintn_t map_key)
 {
   grub_efi_boot_services_t *b;
   grub_efi_status_t status;
-  
+
   b = grub_efi_system_table->boot_services;
   status = efi_call_2 (b->exit_boot_services, grub_efi_image_handle, map_key);
   return status == GRUB_EFI_SUCCESS;
+}
+
+grub_err_t
+grub_efi_set_virtual_address_map (grub_efi_uintn_t memory_map_size,
+				  grub_efi_uintn_t descriptor_size,
+				  grub_efi_uint32_t descriptor_version,
+				  grub_efi_memory_descriptor_t *virtual_map)
+{
+  grub_efi_runtime_services_t *r;
+  grub_efi_status_t status;
+
+  r = grub_efi_system_table->runtime_services;
+  status = efi_call_4 (r->set_virtual_address_map, memory_map_size,
+		       descriptor_size, descriptor_version, virtual_map);
+
+  if (status == GRUB_EFI_SUCCESS)
+    return GRUB_ERR_NONE;
+
+  return grub_error (GRUB_ERR_IO, "set_virtual_address_map failed");
 }
 
 grub_uint32_t
@@ -215,7 +241,7 @@ grub_arch_modules_addr (void)
   struct grub_pe32_section_table *section;
   struct grub_module_info *info;
   grub_uint16_t i;
-  
+
   image = grub_efi_get_loaded_image (grub_efi_image_handle);
   if (! image)
     return 0;
@@ -250,7 +276,7 @@ char *
 grub_efi_get_filename (grub_efi_device_path_t *dp)
 {
   char *name = 0;
-  
+
   while (1)
     {
       grub_efi_uint8_t type = GRUB_EFI_DEVICE_PATH_TYPE (dp);
@@ -274,7 +300,7 @@ grub_efi_get_filename (grub_efi_device_path_t *dp)
 	    }
 	  else
 	    size = 0;
-	  
+
 	  len = ((GRUB_EFI_DEVICE_PATH_LENGTH (dp) - 4)
 		 / sizeof (grub_efi_char16_t));
 	  p = grub_realloc (name, size + len * 4 + 1);
@@ -420,17 +446,17 @@ grub_efi_print_device_path (grub_efi_device_path_t *dp)
 		grub_efi_expanded_acpi_device_path_t eacpi;
 		grub_memcpy (&eacpi, dp, sizeof (eacpi));
 		grub_printf ("/ACPI(");
-		
+
 		if (GRUB_EFI_EXPANDED_ACPI_HIDSTR (dp)[0] == '\0')
 		  grub_printf ("%x,", (unsigned) eacpi.hid);
 		else
 		  grub_printf ("%s,", GRUB_EFI_EXPANDED_ACPI_HIDSTR (dp));
-		
+
 		if (GRUB_EFI_EXPANDED_ACPI_UIDSTR (dp)[0] == '\0')
 		  grub_printf ("%x,", (unsigned) eacpi.uid);
 		else
 		  grub_printf ("%s,", GRUB_EFI_EXPANDED_ACPI_UIDSTR (dp));
-		
+
 		if (GRUB_EFI_EXPANDED_ACPI_CIDSTR (dp)[0] == '\0')
 		  grub_printf ("%x)", (unsigned) eacpi.cid);
 		else
@@ -727,10 +753,33 @@ grub_efi_print_device_path (grub_efi_device_path_t *dp)
 	  return;
 	  break;
 	}
-      
+
       if (GRUB_EFI_END_ENTIRE_DEVICE_PATH (dp))
 	break;
 
       dp = (grub_efi_device_path_t *) ((char *) dp + len);
     }
 }
+
+int
+grub_efi_finish_boot_services (void)
+{
+  grub_efi_uintn_t mmap_size = 0;
+  grub_efi_uintn_t map_key;
+  grub_efi_uintn_t desc_size;
+  grub_efi_uint32_t desc_version;
+  void *mmap_buf = 0;
+
+  if (grub_efi_get_memory_map (&mmap_size, mmap_buf, &map_key,
+			       &desc_size, &desc_version) < 0)
+    return 0;
+
+  mmap_buf = grub_malloc (mmap_size);
+
+  if (grub_efi_get_memory_map (&mmap_size, mmap_buf, &map_key,
+			       &desc_size, &desc_version) <= 0)
+    return 0;
+
+  return grub_efi_exit_boot_services (map_key);
+}
+

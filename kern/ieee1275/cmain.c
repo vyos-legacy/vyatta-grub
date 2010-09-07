@@ -17,12 +17,9 @@
  *  along with GRUB.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <alloca.h>
-#include <stdint.h>
 #include <grub/kernel.h>
 #include <grub/misc.h>
 #include <grub/types.h>
-#include <grub/machine/kernel.h>
 #include <grub/ieee1275/ieee1275.h>
 
 int (*grub_ieee1275_entry_fn) (void *);
@@ -61,6 +58,7 @@ grub_ieee1275_find_options (void)
   char tmp[32];
   int is_smartfirmware = 0;
   int is_olpc = 0;
+  int is_qemu = 0;
 
   grub_ieee1275_finddevice ("/", &root);
   grub_ieee1275_finddevice ("/options", &options);
@@ -80,6 +78,11 @@ grub_ieee1275_find_options (void)
 				   tmp,	sizeof (tmp), 0);
   if (rc >= 0 && !grub_strcmp (tmp, "OLPC"))
     is_olpc = 1;
+
+  rc = grub_ieee1275_get_property (root, "model",
+				   tmp,	sizeof (tmp), 0);
+  if (rc >= 0 && !grub_strcmp (tmp, "Emulated PC"))
+    is_qemu = 1;
 
   if (is_smartfirmware)
     {
@@ -130,12 +133,16 @@ grub_ieee1275_find_options (void)
 
 	 - SD cards.  These work fine.
 
-	 To avoid brekage, we only need to skip USB probing.  However,
+	 To avoid breakage, we only need to skip USB probing.  However,
 	 since detecting SD cards is more reliable, we do that instead.
       */
 
       grub_ieee1275_set_flag (GRUB_IEEE1275_FLAG_OFDISK_SDCARD_ONLY);
     }
+
+  if (is_qemu)
+    /* OpenFirmware hangs on qemu if one requests any memory below 1.5 MiB.  */
+    grub_ieee1275_set_flag (GRUB_IEEE1275_FLAG_NO_PRE1_5M_CLAIM);
 
   if (! grub_ieee1275_finddevice ("/rom/boot-rom", &bootrom))
     {

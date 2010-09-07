@@ -1,6 +1,16 @@
-#!/bin/bash -e
+#!/bin/sh -e
 
-source /usr/lib/grub/update-grub_lib
+. /usr/lib/grub/grub-mkconfig_lib
+
+# this allows desktop-base to override our settings
+f=/usr/share/desktop-base/grub_background.sh
+if test -e ${f} ; then
+  . ${f}
+else
+  WALLPAPER="/usr/share/images/desktop-base/moreblue-orbit-grub.png"
+  COLOR_NORMAL="black/black"
+  COLOR_HIGHLIGHT="magenta/black"
+fi
 
 set_blue_theme()
 {
@@ -12,23 +22,26 @@ EOF
 
 # check for usable backgrounds
 use_bg=false
-if [ "$GRUB_TERMINAL" = "gfxterm" ] ; then
-  for i in {/boot/grub,/usr/share/images/desktop-base}/debian-blueish-wallpaper-640x480.{png,tga} ; do
-    if is_path_readable_by_grub $i ; then 
-      bg=$i
-      case ${bg} in
-        *.png)		reader=png ;;
-        *.tga)		reader=tga ;;
-        *.jpg|*.jpeg)	reader=jpeg ;;
-      esac
-      if test -e /boot/grub/${reader}.mod ; then
-        echo "Found Debian background: `basename ${bg}`" >&2
-        use_bg=true
-        break
+for output in ${GRUB_TERMINAL_OUTPUT}; do
+  if [ "$output" = "gfxterm" ] ; then
+    for i in /boot/grub/`basename ${WALLPAPER}` ${WALLPAPER} ; do
+      if is_path_readable_by_grub $i ; then 
+        bg=$i
+        case ${bg} in
+          *.png)		reader=png ;;
+          *.tga)		reader=tga ;;
+          *.jpg|*.jpeg)	reader=jpeg ;;
+        esac
+        if test -e /boot/grub/${reader}.mod ; then
+          echo "Found background image: `basename ${bg}`" >&2
+          use_bg=true
+          break
+        fi
       fi
-    fi
-  done
-fi
+    done
+    break
+  fi
+done
 
 # set the background if possible
 if ${use_bg} ; then
@@ -36,8 +49,8 @@ if ${use_bg} ; then
   cat << EOF
 insmod ${reader}
 if background_image `make_system_path_relative_to_its_root ${bg}` ; then
-  set color_normal=black/black
-  set color_highlight=magenta/black
+  set color_normal=${COLOR_NORMAL}
+  set color_highlight=${COLOR_HIGHLIGHT}
 else
 EOF
 fi

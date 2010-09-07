@@ -25,18 +25,13 @@
 #include <grub/cache.h>
 #include <grub/kernel.h>
 #include <grub/efi/efi.h>
-#include <grub/time.h>
-
-void
-grub_millisleep (grub_uint32_t ms)
-{
-  grub_millisleep_generic (ms);
-}
+#include <grub/i386/tsc.h>
 
 void
 grub_machine_init (void)
 {
   grub_efi_init ();
+  grub_tsc_init ();
 }
 
 void
@@ -49,10 +44,4 @@ void
 grub_machine_set_prefix (void)
 {
   grub_efi_set_prefix ();
-}
-
-void
-grub_arch_sync_caches (void *address __attribute__ ((unused)),
-                       grub_size_t len __attribute__ ((unused)))
-{
 }

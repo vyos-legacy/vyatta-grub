@@ -1,6 +1,6 @@
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2002,2003,2005,2007  Free Software Foundation, Inc.
+ *  Copyright (C) 2002,2003,2005,2007,2008,2009  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,256 +21,116 @@
 #include <grub/mm.h>
 #include <grub/misc.h>
 #include <grub/env.h>
+#include <grub/time.h>
 
-/* The list of terminals.  */
-static grub_term_t grub_term_list;
-
-/* The current terminal.  */
-static grub_term_t grub_cur_term;
-
-/* The amount of lines counted by the pager.  */
-static int grub_more_lines;
-
-/* If the more pager is active.  */
-static int grub_more;
-
-/* The current cursor state.  */
-static int cursor_state = 1;
-
-void
-grub_term_register (grub_term_t term)
-{
-  term->next = grub_term_list;
-  grub_term_list = term;
-}
-
-void
-grub_term_unregister (grub_term_t term)
-{
-  grub_term_t *p, q;
-  
-  for (p = &grub_term_list, q = *p; q; p = &(q->next), q = q->next)
-    if (q == term)
-      {
-        *p = q->next;
-	break;
-      }
-}
-
-void
-grub_term_iterate (int (*hook) (grub_term_t term))
-{
-  grub_term_t p;
-  
-  for (p = grub_term_list; p; p = p->next)
-    if (hook (p))
-      break;
-}
-
-grub_err_t
-grub_term_set_current (grub_term_t term)
-{
-  if (grub_cur_term && grub_cur_term->fini)
-    if ((grub_cur_term->fini) () != GRUB_ERR_NONE)
-      return grub_errno;
-
-  if (term->init)
-    if ((term->init) () != GRUB_ERR_NONE)
-      return grub_errno;
-  
-  grub_cur_term = term;
-  grub_cls ();
-  grub_setcursor (grub_getcursor ());
-  return GRUB_ERR_NONE;
-}
-
-grub_term_t
-grub_term_get_current (void)
-{
-  return grub_cur_term;
-}
+struct grub_term_output *grub_term_outputs_disabled;
+struct grub_term_input *grub_term_inputs_disabled;
+struct grub_term_output *grub_term_outputs;
+struct grub_term_input *grub_term_inputs;
 
 /* Put a Unicode character.  */
-void
-grub_putcode (grub_uint32_t code)
+static void
+grub_putcode_dumb (grub_uint32_t code,
+		   struct grub_term_output *term)
 {
-  int height = grub_getwh () & 255;
+  struct grub_unicode_glyph c =
+    {
+      .base = code,
+      .variant = 0,
+      .attributes = 0,
+      .ncomb = 0,
+      .combining = 0,
+      .estimated_width = 1
+    };
 
-  if (code == '\t' && grub_cur_term->getxy)
+  if (code == '\t' && term->getxy)
     {
       int n;
-      
-      n = 8 - ((grub_getxy () >> 8) & 7);
+
+      n = 8 - ((term->getxy (term) >> 8) & 7);
       while (n--)
-	grub_putcode (' ');
+	grub_putcode_dumb (' ', term);
 
       return;
     }
-  
-  (grub_cur_term->putchar) (code);
-  
+
+  (term->putchar) (term, &c);
   if (code == '\n')
-    {
-      grub_putcode ('\r');
-
-      grub_more_lines++;
-
-      if (grub_more && grub_more_lines == height - 1)
-	{
-	  char key;
-	  int pos = grub_getxy ();
-
-	  /* Show --MORE-- on the lower left side of the screen.  */
-	  grub_gotoxy (1, height - 1);
-	  grub_setcolorstate (GRUB_TERM_COLOR_HIGHLIGHT);
-	  grub_printf ("--MORE--");
-	  grub_setcolorstate (GRUB_TERM_COLOR_STANDARD);
-
-	  key = grub_getkey ();
-	  
-	  /* Remove the message.  */
-	  grub_gotoxy (1, height - 1);
-	  grub_printf ("        ");
-	  grub_gotoxy (pos >> 8, pos & 0xFF);
-	  
-	  /* Scroll one lines or an entire page, depending on the key.  */
-	  if (key == '\r' || key =='\n')
-	    grub_more_lines--;
-	  else
-	    grub_more_lines = 0;
-	}
-    }
+    grub_putcode_dumb ('\r', term);
 }
 
-/* Put a character. C is one byte of a UTF-8 stream.
-   This function gathers bytes until a valid Unicode character is found.  */
-void
-grub_putchar (int c)
+static void
+grub_xputs_dumb (const char *str)
 {
-  static grub_size_t size = 0;
-  static grub_uint8_t buf[6];
-  grub_uint32_t code;
-  grub_ssize_t ret;
+  for (; *str; str++)
+    {
+      grub_term_output_t term;
+      grub_uint32_t code = *str;
+      if (code > 0x7f)
+	code = '?';
 
-  buf[size++] = c;
-  ret = grub_utf8_to_ucs4 (&code, buf, size);
-  
-  if (ret > 0)
-    {
-      size = 0;
-      grub_putcode (code);
-    }
-  else if (ret < 0)
-    {
-      size = 0;
-      grub_putcode ('?');
+      FOR_ACTIVE_TERM_OUTPUTS(term)
+	grub_putcode_dumb (code, term);
     }
 }
 
-/* Return the number of columns occupied by the character code CODE.  */
-grub_ssize_t
-grub_getcharwidth (grub_uint32_t code)
-{
-  return (grub_cur_term->getcharwidth) (code);
-}
+void (*grub_xputs) (const char *str) = grub_xputs_dumb;
 
 int
 grub_getkey (void)
 {
-  return (grub_cur_term->getkey) ();
+  grub_term_input_t term;
+
+  grub_refresh ();
+
+  while (1)
+    {
+      FOR_ACTIVE_TERM_INPUTS(term)
+      {
+	int key = term->checkkey (term);
+	if (key != -1)
+	  return term->getkey (term);
+      }
+
+      grub_cpu_idle ();
+    }
 }
 
 int
 grub_checkkey (void)
 {
-  return (grub_cur_term->checkkey) ();
-}
+  grub_term_input_t term;
 
-grub_uint16_t
-grub_getxy (void)
-{
-  return (grub_cur_term->getxy) ();
-}
+  FOR_ACTIVE_TERM_INPUTS(term)
+  {
+    int key = term->checkkey (term);
+    if (key != -1)
+      return key;
+  }
 
-grub_uint16_t
-grub_getwh (void)
-{
-  return (grub_cur_term->getwh) ();
-}
-
-void
-grub_gotoxy (grub_uint8_t x, grub_uint8_t y)
-{
-  (grub_cur_term->gotoxy) (x, y);
-}
-
-void
-grub_cls (void)
-{
-  if ((grub_cur_term->flags & GRUB_TERM_DUMB) || (grub_env_get ("debug")))
-    {
-      grub_putchar ('\n');
-      grub_refresh ();
-    }
-  else
-    (grub_cur_term->cls) ();
-}
-
-void
-grub_setcolorstate (grub_term_color_state state)
-{
-  if (grub_cur_term->setcolorstate)
-    (grub_cur_term->setcolorstate) (state);
-}
-
-void
-grub_setcolor (grub_uint8_t normal_color, grub_uint8_t highlight_color)
-{
-  if (grub_cur_term->setcolor)
-    (grub_cur_term->setcolor) (normal_color, highlight_color);
-}
-
-void
-grub_getcolor (grub_uint8_t *normal_color, grub_uint8_t *highlight_color)
-{
-  if (grub_cur_term->getcolor)
-    (grub_cur_term->getcolor) (normal_color, highlight_color);
+  return -1;
 }
 
 int
-grub_setcursor (int on)
+grub_getkeystatus (void)
 {
-  int ret = cursor_state;
+  int status = 0;
+  grub_term_input_t term;
 
-  if (grub_cur_term->setcursor)
-    {
-      (grub_cur_term->setcursor) (on);
-      cursor_state = on;
-    }
-  
-  return ret;
-}
+  FOR_ACTIVE_TERM_INPUTS(term)
+  {
+    if (term->getkeystatus)
+      status |= term->getkeystatus (term);
+  }
 
-int
-grub_getcursor (void)
-{
-  return cursor_state;
+  return status;
 }
 
 void
 grub_refresh (void)
 {
-  if (grub_cur_term->refresh)
-    (grub_cur_term->refresh) ();
-}
+  struct grub_term_output *term;
 
-void
-grub_set_more (int onoff)
-{
-  if (onoff == 1)
-    grub_more++;
-  else
-    grub_more--;
-
-  grub_more_lines = 0;
+  FOR_ACTIVE_TERM_OUTPUTS(term)
+    grub_term_refresh (term);
 }
