@@ -129,8 +129,17 @@ struct grub_raid_super_09
   grub_uint32_t failed_disks;	/* Number of failed disks.  */
   grub_uint32_t spare_disks;	/* Number of spare disks.  */
   grub_uint32_t sb_csum;	/* Checksum of the whole superblock.  */
-  grub_uint64_t events;		/* Superblock update count.  */
-  grub_uint64_t cp_events;	/* Checkpoint update count.  */
+#ifdef GRUB_TARGET_WORDS_BIGENDIAN
+  grub_uint32_t events_hi;	/*  7 high-order of superblock update count   */
+  grub_uint32_t events_lo;	/*  8 low-order of superblock update count    */
+  grub_uint32_t cp_events_hi;	/*  9 high-order of checkpoint update count   */
+  grub_uint32_t cp_events_lo;	/* 10 low-order of checkpoint update count    */
+#else
+  grub_uint32_t events_lo;	/*  7 low-order of superblock update count    */
+  grub_uint32_t events_hi;	/*  8 high-order of superblock update count   */
+  grub_uint32_t cp_events_lo;	/*  9 low-order of checkpoint update count    */
+  grub_uint32_t cp_events_hi;	/* 10 high-order of checkpoint update count   */
+#endif
   grub_uint32_t recovery_cp;	/* Recovery checkpoint sector count.  */
   grub_uint32_t gstate_sreserved[SB_GENERIC_STATE_WORDS - 12];
 
@@ -263,6 +272,7 @@ grub_mdraid_detect_09 (grub_disk_addr_t sector,
   array->disk_size = (sb->size) ? sb->size * 2 : sector;
   array->chunk_size = sb->chunk_size >> 9;
   array->index = sb->this_disk.number;
+  array->events = (grub_uint64_t) sb->events_hi << 32 | sb->events_lo;
   array->uuid_len = 16;
   array->uuid = grub_malloc (16);
   if (!array->uuid)

@@ -508,6 +508,24 @@ insert_array (grub_disk_t disk, struct grub_raid_array *new_array,
           grub_dprintf ("raid", "Found two disks with the number %d?!?",
 			new_array->number);
 
+	if (new_array->events < array->events) {
+	  /* This member is not fresh */
+	  grub_dprintf("raid", "Member %s is not fresh.  Skipping it.\n",
+		       new_array->name);
+	  return 0;
+	}
+
+	if (new_array->events > array->events) {
+	  /* This member is newer than others in same array. */
+	  unsigned int i;
+
+	  for (i = 0; i < array->total_devs; i++)
+	    if (array->device[i]) {
+	      array->device[i] = 0;
+	      array->nr_devs--;
+	    }
+	}
+
         if (new_array->disk_size < array->disk_size)
           array->disk_size = new_array->disk_size;
         break;
