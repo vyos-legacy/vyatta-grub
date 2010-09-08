@@ -1,3 +1,17 @@
+grub2 (1.98+20100804-4-vyatta3) unstable; urgency=low
+
+  * Add missing disk files
+  * Add missing files
+  * add missing file
+  * Force efiemu config.h
+  * Restore RAID array freshness checks
+  * Don't need xorrisso
+  * Add more missing rules
+  * Don't build grub-emu
+  * Add version of update-grub
+
+ -- Stephen Hemminger <stephen.hemminger@vyatta.com>  Tue, 07 Sep 2010 19:55:19 -0700
+
 grub2 (1.98+20100804-4-vyatta2) unstable; urgency=low
 
   * Re-integrate earlier build changes
