@@ -1,3 +1,9 @@
+grub2 (1.98+20100804-4-vyatta4) unstable; urgency=low
+
+  * clean up build
+
+ -- An-Cheng Huang <ancheng@vyatta.com>  Thu, 09 Sep 2010 11:31:27 -0700
+
 grub2 (1.98+20100804-4-vyatta3) unstable; urgency=low
 
   * Add missing disk files
