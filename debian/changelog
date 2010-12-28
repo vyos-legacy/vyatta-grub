@@ -1,3 +1,9 @@
+grub2 (1.96+20080724-7-vyatta13+mendocino1) unstable; urgency=low
+
+  * new branch
+
+ -- An-Cheng Huang <ancheng@vyatta.com>  Tue, 28 Dec 2010 20:37:20 +0000
+
 grub2 (1.96+20080724-7-vyatta13) unstable; urgency=low
 
   * UNRELEASED
