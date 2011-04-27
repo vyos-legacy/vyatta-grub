@@ -1,118 +1,421 @@
-# Translation of grub2 debconf templates to German
-# Copyright (C) Helge Kreutzmann <debian@helgefjell.de>, 2007, 2008.
+# Translation of GRUB 2 debconf templates to German
+# Copyright (C) Helge Kreutzmann <debian@helgefjell.de>, 2007-2009.
+#               Martin Eberhard Schauer <Martin.E.Schauer@gmx.de>, 2010.
 # This file is distributed under the same license as the grub2 package.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: grub2 1.96+20080203-1\n"
-"Report-Msgid-Bugs-To: pkg-grub-devel@lists.alioth.debian.org\n"
-"POT-Creation-Date: 2008-02-13 14:53+0100\n"
-"PO-Revision-Date: 2008-02-13 15:02+0100\n"
-"Last-Translator: Helge Kreutzmann <debian@helgefjell.de>\n"
-"Language-Team: de <debian-l10n-german@lists.debian.org>\n"
+"Project-Id-Version: grub2 1.98+20100710-2\n"
+"Report-Msgid-Bugs-To: grub2@packages.debian.org\n"
+"POT-Creation-Date: 2010-12-08 21:22+0000\n"
+"PO-Revision-Date: 2010-12-11 11:07+0100\n"
+"Last-Translator: Martin Eberhard Schauer <Martin.E.Schauer@gmx.de>\n"
+"Language-Team: German <debian-l10n-german@lists.debian.org>\n"
+"Language: de\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-15\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-
-#. Type: note
-#. Description
-#: ../grub2.templates:1001
-msgid "GRUB 1.95 numbering scheme transition"
-msgstr "�bergang des Partitionierungs-Nummerierungs-Schemas in GRUB 1.95"
-
-#. Type: note
-#. Description
-#: ../grub2.templates:1001
-msgid ""
-"As of version 1.95, GRUB 2 has changed its numbering scheme.  Partitions are "
-"now counted starting from 1 rather than 0.  This is to make it consistent "
-"with device names of Linux and the other kernels used in Debian.  For "
-"example, when using Linux as the kernel, \"(hd0,1)\" refers to the same "
-"partition as the /dev/sda1 device node."
-msgstr ""
-"Mit Version 1.95 hat GRUB 2 sein Partitionierungs-Nummerierungs-Schema "
-"ge�ndert. Partitionen werden jetzt ab 1 statt ab 0 gez�hlt. Dies ist damit "
-"mit den Ger�tenamen von Linux und anderen Kerneln in Debian konsistent. Zum "
-"Beispiel beim Einsatz von Linux als Kernel bezieht sich �(hd0,1)� auf die "
-"gleiche Platte wie der /dev/sda1-Ger�teknoten."
-
-#. Type: note
-#. Description
-#: ../grub2.templates:1001
-msgid ""
-"Because of this, there's a chance your system becomes unbootable if update-"
-"grub(8) is run before GRUB is updated, generating a grub.cfg file that your "
-"installed GRUB won't yet be able to parse correctly.  To ensure your system "
-"will be able to boot, you have to:"
-msgstr ""
-"Daher besteht ein Risiko, dass Ihr System nicht mehr starten kann, falls "
-"update-grub(8) l�uft, bevor GRUB aktualisiert wird und somit eine grub.cfg-"
-"Datei erstellt, die der installierte GRUB nicht korrekt auslesen kann. Um "
-"sicherzustellen, dass Ihr System starten kann, m�ssen Sie folgendes "
-"durchf�hren:"
-
-#. Type: note
-#. Description
-#: ../grub2.templates:1001
-msgid ""
-" - Reinstall GRUB (typically, by running grub-install).\n"
-" - Rerun update-grub to generate a new grub.cfg."
-msgstr ""
-" - GRUB neu installieren (typischerweise via Ausf�hrung von grub-install)\n"
-" - update-grub erneut ausf�hren, um eine neue grub.cfg zu erstellen."
+"X-Generator: KBabel 1.11.4\n"
 
 #. Type: boolean
 #. Description
-#: ../grub-pc.templates:1001
+#: ../grub-pc.templates.in:2001
 msgid "Chainload from menu.lst?"
-msgstr "Chainload (Kettenladen) aus menu.lst?"
+msgstr "Aus »menu.lst« laden (Chainload)?"
 
 #. Type: boolean
 #. Description
-#: ../grub-pc.templates:1001
+#: ../grub-pc.templates.in:2001
 msgid "GRUB upgrade scripts have detected a GRUB Legacy setup in /boot/grub."
 msgstr ""
-"Die Upgrade-Skripte von GRUB haben eine �GRUB Legacy�-Installation in /boot/"
-"grub erkannt."
+"Die Upgrade-Skripte von GRUB haben eine Installation von »GRUB Legacy« in /"
+"boot/grub gefunden."
 
 #. Type: boolean
 #. Description
-#: ../grub-pc.templates:1001
+#: ../grub-pc.templates.in:2001
 msgid ""
 "In order to replace the Legacy version of GRUB in your system, it is "
-"recommended that /boot/grub/menu.lst is adjusted to chainload GRUB 2 from "
-"your existing GRUB Legacy setup.  This step may be automaticaly performed "
-"now."
+"recommended that /boot/grub/menu.lst is adjusted to load a GRUB 2 boot image "
+"from your existing GRUB Legacy setup. This step can be automatically "
+"performed now."
 msgstr ""
-"Um die Legacy-Version von GRUB auf Ihrem System zu ersetzen, wird empfohlen, "
-"dass /boot/grub/menu.lst angepasst wird, so dass GRUB 2 aus Ihrer "
-"existierenden GRUB-Legacy-Einrichtung heraus geladen wird. Dieser Schritt "
+"Um die Legacy-Version von GRUB auf Ihrem System zu ersetzen, wird die "
+"Anpassung von /boot/grub/menu.lst empfohlen, so dass GRUB 2 aus Ihrer "
+"bestehenden GRUB-Legacy-Konfiguration heraus geladen wird. Dieser Schritt "
 "kann jetzt automatisch vollzogen werden."
 
 #. Type: boolean
 #. Description
-#: ../grub-pc.templates:1001
+#: ../grub-pc.templates.in:2001
 msgid ""
 "It's recommended that you accept chainloading GRUB 2 from menu.lst, and "
-"verify that your new GRUB 2 setup is functional for you, before you install "
-"it directly to your MBR (Master Boot Record)."
+"verify that the new GRUB 2 setup works before it is written to the MBR "
+"(Master Boot Record)."
 msgstr ""
-"Es wird empfohlen, dass Sie dem Chainloading von GRUB 2 aus der menu.lst "
-"zustimmen und �berpr�fen, dass die GRUB 2-Installation f�r Sie funktioniert, "
-"bevor Sie diese direkt in Ihren MBR (Master Boot Record) installieren."
+"Es wird empfohlen, dass Sie dem Laden von GRUB 2 aus menu.lst zustimmen und "
+"überprüfen, dass Ihre neue »GRUB 2«-Installation funktioniert, bevor diese "
+"in den MBR (Master Boot Record) geschrieben wird."
 
 #. Type: boolean
 #. Description
-#: ../grub-pc.templates:1001
+#: ../grub-pc.templates.in:2001
 msgid ""
-"In either case, whenever you want GRUB 2 to be loaded directly from MBR, you "
-"can do so by issuing (as root) the following command:"
+"Whatever your decision, you can replace the old MBR image with GRUB 2 later "
+"by issuing the following command as root:"
 msgstr ""
-"Auf jeden Fall k�nnen Sie den folgenden Befehl (als root) eingeben, wenn Sie "
-"m�chten, das GRUB 2 direkt vom MBR geladen wird:"
+"Unabhängig von Ihrer Entscheidung können Sie den alten MBR später durch GRUB "
+"2 ersetzen. Geben Sie dazu als »root« den folgenden Befehl ein:"
+
+#. Type: multiselect
+#. Description
+#. Type: multiselect
+#. Description
+#: ../grub-pc.templates.in:3001 ../grub-pc.templates.in:4001
+msgid "GRUB install devices:"
+msgstr "Geräte für die GRUB-Installation:"
+
+#. Type: multiselect
+#. Description
+#: ../grub-pc.templates.in:3001
+msgid ""
+"The grub-pc package is being upgraded. This menu allows you to select which "
+"devices you'd like grub-install to be automatically run for, if any."
+msgstr ""
+"Für das Paket grub-pc wird gerade ein Upgrade durchgeführt. In diesem Menü "
+"können Sie auswählen, ob und für welche Geräte grub-install automatisch "
+"ausgeführt werden soll."
+
+#. Type: multiselect
+#. Description
+#: ../grub-pc.templates.in:3001
+msgid ""
+"Running grub-install automatically is recommended in most situations, to "
+"prevent the installed GRUB core image from getting out of sync with GRUB "
+"modules or grub.cfg."
+msgstr ""
+"Für die Mehrzahl der Fälle wird empfohlen, grub-install automatisch laufen "
+"zu lassen. So wird vermieden, dass das installierte GRUB-Image nicht zu den "
+"GRUB-Modulen oder grub.cfg passt."
+
+#. Type: multiselect
+#. Description
+#. Type: multiselect
+#. Description
+#: ../grub-pc.templates.in:3001 ../grub-pc.templates.in:4001
+msgid ""
+"If you're unsure which drive is designated as boot drive by your BIOS, it is "
+"often a good idea to install GRUB to all of them."
+msgstr ""
+"Wenn Sie nicht sicher sind, welches Gerät das BIOS zum Booten benutzt, ist "
+"es oft eine gute Idee, GRUB auf allen Geräten zu installieren."
+
+#. Type: multiselect
+#. Description
+#. Type: multiselect
+#. Description
+#: ../grub-pc.templates.in:3001 ../grub-pc.templates.in:4001
+msgid ""
+"Note: it is possible to install GRUB to partition boot records as well, and "
+"some appropriate partitions are offered here. However, this forces GRUB to "
+"use the blocklist mechanism, which makes it less reliable, and therefore is "
+"not recommended."
+msgstr ""
+"Hinweis: Sie können GRUB auch in die Boot-Blöcke von Partionen schreiben."
+"Hier werden auch einige geeignete Partitionen angeboten. Das zwingt GRUB "
+"allerdings dazu, den Blocklist-Mechanismus zu verwenden. Dieser ist weniger "
+"zuverlässig und wird daher nicht empfohlen."
+
+#. Type: multiselect
+#. Description
+#: ../grub-pc.templates.in:4001
+msgid ""
+"The GRUB boot loader was previously installed to a disk that is no longer "
+"present, or whose unique identifier has changed for some reason. It is "
+"important to make sure that the installed GRUB core image stays in sync with "
+"GRUB modules and grub.cfg. Please check again to make sure that GRUB is "
+"written to the appropriate boot devices."
+msgstr ""
+"Der GRUB-Bootloader wurde zuvor auf einem Datenträger, der nicht mehr im "
+"System vorhanden ist oder dessen eindeutige Kennung aus irgendeinem Grund "
+"geändert wurde, installiert. Es ist wichtig, sicherzustellen, dass das "
+"installierte GRUB-Core-Image synchron mit den GRUB-Modulen und grub.cfg "
+"bleibt. Bitte prüfen Sie erneut, um sicherzustellen, dass GRUB auf die "
+"entsprechenden Boot-Geräte geschrieben wird."
+
+#. Type: text
+#. Description
+#. Disk sizes are in decimal megabytes, to match how disk manufacturers
+#. usually describe them.
+#: ../grub-pc.templates.in:5001
+msgid "${DEVICE} (${SIZE} MB; ${MODEL})"
+msgstr "${DEVICE} (${SIZE} MB; ${MODEL})"
+
+#. Type: text
+#. Description
+#. The "-" is used to indicate indentation. Leading spaces may not work.
+#: ../grub-pc.templates.in:6001
+msgid "- ${DEVICE} (${SIZE} MB; ${PATH})"
+msgstr "- ${DEVICE} (${SIZE} MB; ${PATH})"
 
 #. Type: boolean
 #. Description
-#: ../grub-pc.templates:1001
-msgid "upgrade-from-grub-legacy"
-msgstr "upgrade-from-grub-legacy"
+#: ../grub-pc.templates.in:7001
+msgid "Writing GRUB to boot device failed - continue?"
+msgstr "GRUB konnte nicht auf das Boot-Gerät geschrieben werden - fortfahren?"
+
+#. Type: boolean
+#. Description
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:7001 ../grub-pc.templates.in:8001
+msgid "GRUB failed to install to the following devices:"
+msgstr "GRUB konnte nicht auf den folgenden Geräten installiert werden:"
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:7001
+msgid ""
+"Do you want to continue anyway? If you do, your computer may not start up "
+"properly."
+msgstr ""
+"Wollen Sie trotzdem fortfahren? Falls ja, wird Ihr Rechner vielleicht nicht "
+"problemlos hochfahren."
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:8001
+msgid "Writing GRUB to boot device failed - try again?"
+msgstr ""
+"Das Schreiben von GRUB auf das Boot-Gerät ist fehlgeschlagen. Noch einmal "
+"versuchen?"
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:8001
+msgid ""
+"You may be able to install GRUB to some other device, although you should "
+"check that your system will boot from that device. Otherwise, the upgrade "
+"from GRUB Legacy will be canceled."
+msgstr ""
+"Vielleicht können Sie GRUB auf einem anderen Gerät installieren. Sie sollten "
+"aber prüfen, ob Ihr System von diesem Gerät startet. Sonst wird das Upgrade "
+"von GRUB Legacy abgebrochen."
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:9001
+msgid "Continue without installing GRUB?"
+msgstr "Fortsetzen, ohne Grub zu installieren?"
+
+# (mes) Seht Ihr einen Unterschied zwischen der alten und der neuen Version.
+# Ich habe jetzt nur das fuzzy rausgenommen.
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:9001
+msgid ""
+"You chose not to install GRUB to any devices. If you continue, the boot "
+"loader may not be properly configured, and when this computer next starts up "
+"it will use whatever was previously in the boot sector. If there is an "
+"earlier version of GRUB 2 in the boot sector, it may be unable to load "
+"modules or handle the current configuration file."
+msgstr ""
+"Sie haben sich entschieden, GRUB auf kein Gerät zu installieren. Wenn Sie "
+"fortfahren, könnte der Boot-Loader nicht richtig konfiguriert sein. Beim "
+"nächsten Hochfahren dieses Computers wird der Boot-Loader benutzen, was "
+"immer sich vorher im Boot-Sektor befand. Wenn sich schon eine ältere Version "
+"von GRUB 2 im Boot-Sektor befindet, kann sie möglicherweise keine Module "
+"laden oder nicht mehr mit der aktuellen Konfigurationsdatei umgehen."
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:9001
+msgid ""
+"If you are already using a different boot loader and want to carry on doing "
+"so, or if this is a special environment where you do not need a boot loader, "
+"then you should continue anyway. Otherwise, you should install GRUB "
+"somewhere."
+msgstr ""
+"Falls Sie bereits einen anderen Boot-Loader einsetzen und diesen beibehalten "
+"wollen oder Ihre spezielle Umgebung keinen Boot-Loader erfordert, dann "
+"sollten Sie trotzdem fortfahren. Anderenfalls sollten Sie GRUB irgendwo "
+"installieren."
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:10001
+msgid "Remove GRUB 2 from /boot/grub?"
+msgstr "GRUB 2 aus /boot/grub entfernen?"
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:10001
+msgid "Do you want to have all GRUB 2 files removed from /boot/grub?"
+msgstr "Wollen Sie alle Daten von GRUB 2 aus /boot/grub entfernen lassen?"
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:10001
+msgid ""
+"This will make the system unbootable unless another boot loader is installed."
+msgstr ""
+"Wenn kein anderer Boot-Loader installiert ist, kann Ihr System anschließend "
+"nicht mehr booten (hochfahren)."
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:11001
+msgid "Finish conversion to GRUB 2 now?"
+msgstr "Jetzt die Umstellung auf GRUB 2 abschließen?"
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:11001
+msgid ""
+"This system still has files from the GRUB Legacy boot loader installed, but "
+"it now also has GRUB 2 boot records installed on these disks:"
+msgstr ""
+"Auf diesem System sind noch Dateien des GRUB-Legacy-Boot-Loaders "
+"installiert, aber es sind nun auch GRUB-2-Boot-Sektoren auf den folgenden "
+"Datenträgern installiert:"
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:11001
+msgid ""
+"It seems likely that GRUB Legacy is no longer in use, and that you should "
+"instead upgrade the GRUB 2 images on these disks and finish the conversion "
+"to GRUB 2 by removing old GRUB Legacy files. If you do not upgrade these "
+"GRUB 2 images, then they may be incompatible with the new packages and cause "
+"your system to stop booting properly."
+msgstr ""
+"Es sieht so aus, als ob Sie GRUB Legacy nicht mehr verwenden. Daher sollten "
+"Sie stattdessen ein Upgrade der GRUB-2-Images auf diesen Datenträgern "
+"durchführen und die Umstellung auf GRUB 2 abschließen, indem Sie die alten "
+"GRUB-Legacy-Dateien entfernen. Falls Sie das Upgrade für diese GRUB-2-Images "
+"nicht durchführen, könnten diese mit den neuen Paketen nicht kompatibel sein "
+"und dazu führen, dass Ihr System nicht mehr einwandfrei startet."
+
+#. Type: boolean
+#. Description
+#: ../grub-pc.templates.in:11001
+msgid ""
+"You should generally finish the conversion to GRUB 2 unless these boot "
+"records were created by a GRUB 2 installation on some other operating system."
+msgstr ""
+"Grundsätzlich sollten Sie die Umstellung auf GRUB 2 abschließen, es sei "
+"denn, diese GRUB-2-Boot-Sektoren wurden von einem anderen Betriebssystem "
+"installiert."
+
+#. Type: string
+#. Description
+#: ../templates.in:1001
+msgid "Linux command line:"
+msgstr "Linux-Befehlszeile:"
+
+#. Type: string
+#. Description
+#: ../templates.in:1001
+msgid ""
+"The following Linux command line was extracted from /etc/default/grub or the "
+"`kopt' parameter in GRUB Legacy's menu.lst. Please verify that it is "
+"correct, and modify it if necessary."
+msgstr ""
+"Die folgende Linux-Befehlszeile wurde aus /etc/default/grub oder dem "
+"Parameter »kopt« in der Datei menu.lst von GRUB Legacy extrahiert. Bitte "
+"überprüfen Sie, ob die Befehlszeile korrekt ist und ändern Sie diese, wenn "
+"es notwendig ist."
+
+#. Type: string
+#. Description
+#: ../templates.in:2001
+msgid "Linux default command line:"
+msgstr "Standard-Befehlszeile für Linux:"
+
+#. Type: string
+#. Description
+#: ../templates.in:2001
+msgid ""
+"The following string will be used as Linux parameters for the default menu "
+"entry but not for the recovery mode."
+msgstr ""
+"Die folgende Zeichenkette wird als Linux-Parameter für den "
+"Standardmenüeintrag, nicht aber für den Rettungsmodus verwandt."
+
+#. Type: string
+#. Description
+#: ../templates.in:3001
+msgid "kFreeBSD command line:"
+msgstr "Befehlszeile für kFreeBSD:"
+
+#. Type: string
+#. Description
+#: ../templates.in:3001
+msgid ""
+"The following kFreeBSD command line was extracted from /etc/default/grub or "
+"the `kopt' parameter in GRUB Legacy's menu.lst. Please verify that it is "
+"correct, and modify it if necessary."
+msgstr ""
+"Die folgende kFreeBSD-Befehlszeile wurde aus /etc/default/grub oder dem "
+"Parameter »kopt« in der Datei menu.lst von GRUB Legacy extrahiert. Bitte "
+"überprüfen Sie, ob diese korrekt ist und passen Sie sie an, wenn das "
+"erforderlich ist. "
+
+#. Type: string
+#. Description
+#: ../templates.in:4001
+msgid "kFreeBSD default command line:"
+msgstr "Standard-Befehlszeile für kFreeBSD:"
+
+#. Type: string
+#. Description
+#: ../templates.in:4001
+msgid ""
+"The following string will be used as kFreeBSD parameters for the default "
+"menu entry but not for the recovery mode."
+msgstr ""
+"Die folgende Zeichenkette wird als kFreeBSD-Parameter für den "
+"Standardmenüeintrag, nicht aber für den Rettungsmodus verwandt."
+
+#. Type: note
+#. Description
+#: ../templates.in:5001
+msgid "/boot/grub/device.map has been regenerated"
+msgstr "/boot/grub/device.map wurde neu erstellt."
+
+#. Type: note
+#. Description
+#: ../templates.in:5001
+msgid ""
+"The file /boot/grub/device.map has been rewritten to use stable device "
+"names. In most cases, this should significantly reduce the need to change it "
+"in future, and boot menu entries generated by GRUB should not be affected."
+msgstr ""
+"Die Datei /boot/grub/device.map wurde umgeschrieben, um stabile Gerätenamen "
+"zu verwenden. In der Mehrzahl der Fälle sollte dies die Notwendigkeit "
+"zukünftiger Änderungen deutlich verringern. Von GRUB erstellte Boot-Menü-"
+"Einträge sollten nicht betroffen sein."
+
+#. Type: note
+#. Description
+#: ../templates.in:5001
+msgid ""
+"However, since more than one disk is present in the system, it is possible "
+"that the system is depending on the old device map. Please check whether "
+"there are any custom boot menu entries that rely on GRUB's (hdN) drive "
+"numbering, and update them if necessary."
+msgstr ""
+"Da sich in diesem System mehrere Festplatten befinden, ist es möglich, dass "
+"das System von der alten »device map« abhängig ist. Bitte überprüfen Sie, "
+"obbenutzerdefinierte Boot-Menü-Einträge mit der (hdn)-Laufwerkszählung von "
+"GRUB vorhanden sind und aktualisieren Sie diese gegebenenfalls."
+
+#. Type: note
+#. Description
+#: ../templates.in:5001
+msgid ""
+"If you do not understand this message, or if there are no custom boot menu "
+"entries, you can ignore this message."
+msgstr ""
+"Wenn Sie diese Nachricht nicht verstehen oder wenn keine modifizierten Boot-"
+"Menü-Einträge vorhanden sind, können Sie diese Nachricht ignorieren."

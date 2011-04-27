@@ -20,9 +20,11 @@
 #include <grub/dl.h>
 #include <grub/misc.h>
 #include <grub/mm.h>
-#include <grub/normal.h>
+#include <grub/env.h>
 #include <grub/term.h>
 #include <grub/types.h>
+#include <grub/command.h>
+#include <grub/i18n.h>
 
 static char *
 grub_getline (void)
@@ -45,7 +47,7 @@ grub_getline (void)
 
       line[i] = c;
       if (grub_isprint (c))
-	grub_putchar (c);
+	grub_printf ("%c", c);
       i++;
       tmp = grub_realloc (line, 1 + i + sizeof('\0'));
       if (! tmp)
@@ -61,7 +63,7 @@ grub_getline (void)
 }
 
 static grub_err_t
-grub_cmd_read (struct grub_arg_list *state UNUSED, int argc, char **args)
+grub_cmd_read (grub_command_t cmd __attribute__ ((unused)), int argc, char **args)
 {
   char *line = grub_getline ();
   if (! line)
@@ -73,14 +75,16 @@ grub_cmd_read (struct grub_arg_list *state UNUSED, int argc, char **args)
   return 0;
 }
 
+static grub_command_t cmd;
 
 GRUB_MOD_INIT(read)
 {
-  grub_register_command ("read", grub_cmd_read, GRUB_COMMAND_FLAG_CMDLINE,
-			 "read [ENVVAR]", "Set variable with user input", 0);
+  cmd = grub_register_command ("read", grub_cmd_read,
+			       N_("[ENVVAR]"),
+			       N_("Set variable with user input."));
 }
 
 GRUB_MOD_FINI(read)
 {
-  grub_unregister_command ("read");
+  grub_unregister_command (cmd);
 }

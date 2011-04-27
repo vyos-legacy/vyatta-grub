@@ -19,36 +19,10 @@
 #ifndef KERNEL_MACHINE_HEADER
 #define KERNEL_MACHINE_HEADER	1
 
-/* The offset of GRUB_TOTAL_MODULE_SIZE.  */
-#define GRUB_KERNEL_MACHINE_TOTAL_MODULE_SIZE	0x8
+#include <grub/offsets.h>
 
-/* The offset of GRUB_KERNEL_IMAGE_SIZE.  */
-#define GRUB_KERNEL_MACHINE_KERNEL_IMAGE_SIZE	0xc
-
-/* The offset of GRUB_COMPRESSED_SIZE.  */
-#define GRUB_KERNEL_MACHINE_COMPRESSED_SIZE	0x10
-
-/* The offset of GRUB_INSTALL_DOS_PART.  */
-#define GRUB_KERNEL_MACHINE_INSTALL_DOS_PART	0x14
-
-/* The offset of GRUB_INSTALL_BSD_PART.  */
-#define GRUB_KERNEL_MACHINE_INSTALL_BSD_PART	0x18
-
-/* The offset of GRUB_MEMDISK_IMAGE_SIZE.  */
-#define GRUB_KERNEL_MACHINE_MEMDISK_IMAGE_SIZE	0x1c
-
-/* The offset of GRUB_PREFIX.  */
-#define GRUB_KERNEL_MACHINE_PREFIX		0x20
-
-/* End of the data section. */
-#define GRUB_KERNEL_MACHINE_DATA_END		0x60
-
-/* The size of the first region which won't be compressed.  */
-#if defined(ENABLE_LZO)
-#define GRUB_KERNEL_MACHINE_RAW_SIZE		(GRUB_KERNEL_MACHINE_DATA_END + 0x450)
-#elif defined(ENABLE_LZMA)
-#define GRUB_KERNEL_MACHINE_RAW_SIZE		(GRUB_KERNEL_MACHINE_DATA_END + 0x5F0)
-#endif
+/* Enable LZMA compression */
+#define ENABLE_LZMA	1
 
 #ifndef ASM_FILE
 
@@ -67,24 +41,8 @@ extern grub_int32_t grub_install_dos_part;
 /* The BSD partition number of the installed partition.  */
 extern grub_int32_t grub_install_bsd_part;
 
-/* The size of memory disk image, if present.  */
-extern grub_int32_t grub_memdisk_image_size;
-
-/* The prefix which points to the directory where GRUB modules and its
-   configuration file are located.  */
-extern char grub_prefix[];
-
 /* The boot BIOS drive number.  */
-extern grub_int32_t EXPORT_VAR(grub_boot_drive);
-
-/* The root BIOS drive number.  */
-extern grub_int32_t grub_root_drive;
-
-/* The end address of the kernel.  */
-extern grub_addr_t grub_end_addr;
-
-extern grub_addr_t EXPORT_FUNC(grub_arch_memdisk_addr) (void);
-extern grub_off_t EXPORT_FUNC(grub_arch_memdisk_size) (void);
+extern grub_uint8_t EXPORT_VAR(grub_boot_drive);
 
 #endif /* ! ASM_FILE */
 

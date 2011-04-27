@@ -17,22 +17,23 @@
  *  along with GRUB.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <grub/normal.h>
 #include <grub/dl.h>
-#include <grub/arg.h>
 #include <grub/misc.h>
+#include <grub/extcmd.h>
+#include <grub/i18n.h>
+#include <grub/term.h>
 
 static const struct grub_arg_option options[] =
   {
-    {0, 'n', 0, "do not output the trailing newline", 0, 0},
-    {0, 'e', 0, "enable interpretation of backslash escapes", 0, 0},
+    {0, 'n', 0, N_("Do not output the trailing newline."), 0, 0},
+    {0, 'e', 0, N_("Enable interpretation of backslash escapes."), 0, 0},
     {0, 0, 0, 0, 0, 0}
   };
 
-
 static grub_err_t
-grub_cmd_echo (struct grub_arg_list *state, int argc, char **args)
+grub_cmd_echo (grub_extcmd_t cmd, int argc, char **args)
 {
+  struct grub_arg_list *state = cmd->state;
   int newline = 1;
   int i;
 
@@ -43,7 +44,13 @@ grub_cmd_echo (struct grub_arg_list *state, int argc, char **args)
   for (i = 0; i < argc; i++)
     {
       char *arg = *args;
+      /* Unescaping results in a string no longer than the original.  */
+      char *unescaped = grub_malloc (grub_strlen (arg) + 1);
+      char *p = unescaped;
       args++;
+
+      if (!unescaped)
+	return grub_errno;
 
       while (*arg)
 	{
@@ -57,11 +64,11 @@ grub_cmd_echo (struct grub_arg_list *state, int argc, char **args)
 	      switch (*arg)
 		{
 		case '\\':
-		  grub_printf ("\\");
+		  *p++ = '\\';
 		  break;
 
 		case 'a':
-		  grub_printf ("\a");
+		  *p++ = '\a';
 		  break;
 
 		case 'c':
@@ -69,34 +76,38 @@ grub_cmd_echo (struct grub_arg_list *state, int argc, char **args)
 		  break;
 
 		case 'f':
-		  grub_printf ("\f");
+		  *p++ = '\f';
 		  break;
 
 		case 'n':
-		  grub_printf ("\n");
+		  *p++ = '\n';
 		  break;
 
 		case 'r':
-		  grub_printf ("\r");
+		  *p++ = '\r';
 		  break;
 
 		case 't':
-		  grub_printf ("\t");
+		  *p++ = '\t';
 		  break;
 
 		case 'v':
-		  grub_printf ("\v");
+		  *p++ = '\v';
 		  break;
 		}
 	      arg++;
 	      continue;
 	    }
-	  
+
 	  /* This was not an escaped character, or escaping is not
 	     enabled.  */
-	  grub_printf ("%c", *arg);
+	  *p++ = *arg;
 	  arg++;
 	}
+
+      *p = '\0';
+      grub_xputs (unescaped);
+      grub_free (unescaped);
 
       /* If another argument follows, insert a space.  */
       if (i != argc - 1)
@@ -106,19 +117,21 @@ grub_cmd_echo (struct grub_arg_list *state, int argc, char **args)
   if (newline)
     grub_printf ("\n");
 
+  grub_refresh ();  
+
   return 0;
 }
 
+static grub_extcmd_t cmd;
 
 GRUB_MOD_INIT(echo)
 {
-  (void) mod;			/* To stop warning. */
-  grub_register_command ("echo", grub_cmd_echo, GRUB_COMMAND_FLAG_BOTH,
-			 "echo [-e|-n] FILE", "Display a line of text.",
-			 options);
+  cmd = grub_register_extcmd ("echo", grub_cmd_echo, GRUB_COMMAND_FLAG_BOTH,
+			      N_("[-e|-n] STRING"), N_("Display a line of text."),
+			      options);
 }
 
 GRUB_MOD_FINI(echo)
 {
-  grub_unregister_command ("echo");
+  grub_unregister_extcmd (cmd);
 }

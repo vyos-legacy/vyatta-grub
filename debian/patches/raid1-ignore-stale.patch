@@ -1,0 +1,82 @@
+From 2b3d904e8d882ae25e2e662cd9ca9593e4e16f56 Mon Sep 17 00:00:00 2001
+From: Stephen Hemminger <shemminger@vyatta.com>
+Date: Tue, 26 Apr 2011 18:29:44 -0700
+Subject: [PATCH 3/3] Ignore stale members of RAID1 array
+
+If there are multiple mirrors on a RAID array then
+ignore the elements whose super block is out of date.
+
+This fixes the bug where GRUB would not boot if a mirror was
+broken and one side was updated.
+---
+ disk/mdraid_linux.c |    2 ++
+ disk/raid.c         |   22 ++++++++++++++++++++++
+ include/grub/raid.h |    1 +
+ 3 files changed, 25 insertions(+)
+
+--- a/disk/mdraid_linux.c	2011-04-27 07:51:54.976566771 -0700
++++ b/disk/mdraid_linux.c	2011-04-27 07:51:57.492591502 -0700
+@@ -266,6 +266,7 @@ grub_mdraid_detect_09 (grub_disk_addr_t
+   array->disk_size = (sb->size) ? sb->size * 2 : sector;
+   array->chunk_size = sb->chunk_size >> 9;
+   array->index = sb->this_disk.number;
++  array->events = sb->events;
+   array->uuid_len = 16;
+   array->uuid = grub_malloc (16);
+   if (!array->uuid)
+@@ -331,6 +332,7 @@ grub_mdraid_detect_1x (grub_disk_t disk,
+   array->total_devs = grub_le_to_cpu32 (real_sb->raid_disks);
+   array->disk_size = grub_le_to_cpu64 (real_sb->size);
+   array->chunk_size = grub_le_to_cpu32 (real_sb->chunksize);
++  array->events = grub_le_to_cpu64 (real_sb->events);
+   if (grub_le_to_cpu32 (real_sb->dev_number) >=
+       grub_le_to_cpu32 (real_sb->max_dev))
+     return grub_error (GRUB_ERR_NOT_IMPLEMENTED_YET,
+--- a/disk/raid.c	2011-04-27 07:51:57.444591028 -0700
++++ b/disk/raid.c	2011-04-27 08:21:27.857323181 -0700
+@@ -507,8 +507,12 @@ insert_array (grub_disk_t disk, struct g
+ 	    array->allocated_devs = newnum;
+ 	  }
+ 
+-        /* FIXME: Check whether the update time of the superblocks are
+-           the same.  */
++	if (new_array->events < array->events)
++	  /* We found a member that is older than the superblock
++	     and is therefore not up to date. */
++	  return grub_error (GRUB_ERR_BAD_DEVICE,
++			     "stale RAID member ignored %s\n",
++			     new_array->name);
+ 
+         if (array->total_devs == array->nr_devs)
+           /* We found more members of the array than the array
+@@ -637,6 +641,20 @@ insert_array (grub_disk_t disk, struct g
+       if (array->level == 1)
+ 	array->chunk_size = 64;
+     }
++  else if (new_array->events > array->events)
++    {
++      /* Remove stale members of array */
++      unsigned int i;
++
++      for (i = 0; i < p->allocated_devs; i++)
++        if (i != new_array->index && array->members[i].device)
++	  {
++	    grub_disk_close (array->members[i].device);
++	    array->members[i].device = NULL;
++	  }
++
++      array->events = new_array->events;
++    }
+ 
+   /* Add the device to the array. */
+   array->members[new_array->index].device = disk;
+--- a/include/grub/raid.h	2011-04-27 07:51:54.980566810 -0700
++++ b/include/grub/raid.h	2011-04-27 07:51:57.492591502 -0700
+@@ -48,6 +48,7 @@ struct grub_raid_array
+   grub_size_t chunk_size;  /* The size of a chunk, in 512 byte sectors. */
+   grub_uint64_t disk_size; /* Size of an individual disk, in 512 byte
+ 			      sectors. */
++  grub_uint64_t events;	   /* Superblock update count */
+   unsigned int index;               /* Index of current device.  */
+   int uuid_len;            /* The length of uuid.  */
+   char *uuid;              /* The UUID of the device. */

@@ -1,7 +1,7 @@
 /* parser.h - prototypes for the command line parser.  */
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2005,2007  Free Software Foundation, Inc.
+ *  Copyright (C) 2005,2007,2009  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 
 #include <grub/types.h>
 #include <grub/err.h>
+#include <grub/reader.h>
 
 /* All the states for the command line.  */
 typedef enum
@@ -61,7 +62,30 @@ EXPORT_FUNC (grub_parser_cmdline_state) (grub_parser_state_t state,
 
 grub_err_t
 EXPORT_FUNC (grub_parser_split_cmdline) (const char *cmdline,
-					 grub_err_t (*getline) (char **),
+					 grub_reader_getline_t getline,
 					 int *argc, char ***argv);
+
+struct grub_parser
+{
+  /* The next parser.  */
+  struct grub_parser *next;
+
+  /* The parser name.  */
+  const char *name;
+
+  /* Initialize the parser.  */
+  grub_err_t (*init) (void);
+
+  /* Clean up the parser.  */
+  grub_err_t (*fini) (void);
+
+  grub_err_t (*parse_line) (char *line, grub_reader_getline_t getline);
+};
+typedef struct grub_parser *grub_parser_t;
+
+grub_err_t grub_parser_execute (char *source);
+
+grub_err_t
+grub_rescue_parse_line (char *line, grub_reader_getline_t getline);
 
 #endif /* ! GRUB_PARSER_HEADER */

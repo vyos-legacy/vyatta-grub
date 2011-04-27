@@ -1,7 +1,7 @@
 /* ieee1275.h - Access the Open Firmware client interface.  */
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2003,2004,2005,2007,2008  Free Software Foundation, Inc.
+ *  Copyright (C) 2003,2004,2005,2007,2008,2009  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #ifndef GRUB_IEEE1275_HEADER
 #define GRUB_IEEE1275_HEADER	1
 
-#include <stdint.h>
 #include <grub/err.h>
 #include <grub/types.h>
 #include <grub/machine/ieee1275.h>
@@ -33,19 +32,22 @@ struct grub_ieee1275_devalias
   char *type;
 };
 
-struct grub_ieee1275_mem_region 
+struct grub_ieee1275_mem_region
 {
   unsigned int start;
   unsigned int size;
 };
 
+#define IEEE1275_MAX_PROP_LEN	8192
+#define IEEE1275_MAX_PATH_LEN	256
+
 #ifndef IEEE1275_CALL_ENTRY_FN
 #define IEEE1275_CALL_ENTRY_FN(args) (*grub_ieee1275_entry_fn) (args)
 #endif
 
-/* All backcalls to the firmware is done by calling an entry function 
-   which was passed to us from the bootloader.  When doing the backcall, 
-   a structure is passed which specifies what the firmware should do.  
+/* All backcalls to the firmware is done by calling an entry function
+   which was passed to us from the bootloader.  When doing the backcall,
+   a structure is passed which specifies what the firmware should do.
    NAME is the requested service.  NR_INS and NR_OUTS is the number of
    passed arguments and the expected number of return values, resp. */
 struct grub_ieee1275_common_hdr
@@ -60,8 +62,8 @@ struct grub_ieee1275_common_hdr
   (p)->nr_ins = (grub_ieee1275_cell_t) xins; \
   (p)->nr_outs = (grub_ieee1275_cell_t) xouts
 
-typedef grub_ieee1275_cell_t grub_ieee1275_ihandle_t;
-typedef grub_ieee1275_cell_t grub_ieee1275_phandle_t;
+typedef grub_uint32_t grub_ieee1275_ihandle_t;
+typedef grub_uint32_t grub_ieee1275_phandle_t;
 
 extern grub_ieee1275_phandle_t EXPORT_VAR(grub_ieee1275_chosen);
 extern grub_ieee1275_ihandle_t EXPORT_VAR(grub_ieee1275_mmu);
@@ -98,6 +100,9 @@ enum grub_ieee1275_flag
 
   /* Open Hack'Ware don't support the ANSI sequence.  */
   GRUB_IEEE1275_FLAG_NO_ANSI,
+
+  /* OpenFirmware hangs on qemu if one requests any memory below 1.5 MiB.  */
+  GRUB_IEEE1275_FLAG_NO_PRE1_5M_CLAIM,
 };
 
 extern int EXPORT_FUNC(grub_ieee1275_test_flag) (enum grub_ieee1275_flag flag);
@@ -119,14 +124,14 @@ int EXPORT_FUNC(grub_ieee1275_get_integer_property) (grub_ieee1275_phandle_t pha
 						     grub_ssize_t *actual);
 int EXPORT_FUNC(grub_ieee1275_next_property) (grub_ieee1275_phandle_t phandle,
 					      char *prev_prop, char *prop);
-int EXPORT_FUNC(grub_ieee1275_get_property_length) 
+int EXPORT_FUNC(grub_ieee1275_get_property_length)
      (grub_ieee1275_phandle_t phandle, const char *prop, grub_ssize_t *length);
-int EXPORT_FUNC(grub_ieee1275_instance_to_package) 
+int EXPORT_FUNC(grub_ieee1275_instance_to_package)
      (grub_ieee1275_ihandle_t ihandle, grub_ieee1275_phandle_t *phandlep);
 int EXPORT_FUNC(grub_ieee1275_package_to_path) (grub_ieee1275_phandle_t phandle,
 						char *path, grub_size_t len,
 						grub_ssize_t *actual);
-int EXPORT_FUNC(grub_ieee1275_instance_to_path) 
+int EXPORT_FUNC(grub_ieee1275_instance_to_path)
      (grub_ieee1275_ihandle_t ihandle, char *path, grub_size_t len,
       grub_ssize_t *actual);
 int EXPORT_FUNC(grub_ieee1275_write) (grub_ieee1275_ihandle_t ihandle,
@@ -136,7 +141,7 @@ int EXPORT_FUNC(grub_ieee1275_read) (grub_ieee1275_ihandle_t ihandle,
 				     void *buffer, grub_size_t len,
 				     grub_ssize_t *actualp);
 int EXPORT_FUNC(grub_ieee1275_seek) (grub_ieee1275_ihandle_t ihandle,
-				     int pos_hi, int pos_lo,
+				     grub_disk_addr_t pos,
 				     grub_ssize_t *result);
 int EXPORT_FUNC(grub_ieee1275_peer) (grub_ieee1275_phandle_t node,
 				     grub_ieee1275_phandle_t *result);
@@ -163,15 +168,23 @@ int EXPORT_FUNC(grub_ieee1275_set_color) (grub_ieee1275_ihandle_t ihandle,
 int EXPORT_FUNC(grub_ieee1275_milliseconds) (grub_uint32_t *msecs);
 
 
-grub_err_t EXPORT_FUNC(grub_devalias_iterate)
+int EXPORT_FUNC(grub_devalias_iterate)
      (int (*hook) (struct grub_ieee1275_devalias *alias));
-grub_err_t EXPORT_FUNC(grub_children_iterate) (char *devpath,
+int EXPORT_FUNC(grub_children_iterate) (char *devpath,
      int (*hook) (struct grub_ieee1275_devalias *alias));
-grub_err_t EXPORT_FUNC(grub_available_iterate)
-     (int NESTED_FUNC_ATTR (*hook) (grub_uint64_t, grub_uint64_t));
+grub_err_t EXPORT_FUNC(grub_machine_mmap_iterate)
+     (int NESTED_FUNC_ATTR (*hook) (grub_uint64_t, grub_uint64_t, grub_uint32_t));
 int EXPORT_FUNC(grub_claimmap) (grub_addr_t addr, grub_size_t size);
+
+int
+EXPORT_FUNC(grub_ieee1275_map) (grub_addr_t phys, grub_addr_t virt,
+				grub_size_t size, grub_uint32_t mode);
 
 char *EXPORT_FUNC(grub_ieee1275_encode_devname) (const char *path);
 char *EXPORT_FUNC(grub_ieee1275_get_filename) (const char *path);
+
+int EXPORT_FUNC(grub_ieee1275_devices_iterate) (int (*hook)
+						(struct grub_ieee1275_devalias *
+						 alias));
 
 #endif /* ! GRUB_IEEE1275_HEADER */

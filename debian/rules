@@ -1,12 +1,14 @@
 #!/usr/bin/make -f
-
 SHELL		:= bash
+
+deb_version		:= $(shell dpkg-parsechangelog | sed -ne "s/^Version: \(.*\)/\1/p")
+upstream_version	:= $(shell echo $(deb_version) | sed -e "s/-[^-]*$$//")
+
 package		:= grub2
 
+DEB_HOST_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_CPU 2>/dev/null)
 DEB_DH_GENCONTROL_ARGS_ALL = $(shell if [ -f "../.VYATTA_DEV_BUILD" ]; then \
                                        echo "-- -v999.dev"; fi)
-
-include /usr/share/cdbs/1/rules/debhelper.mk
 
 CFLAGS := -g -Wall
 
@@ -15,85 +17,212 @@ ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 else
 	CFLAGS += -O2
 endif
-export CFLAGS
-export CXXFLAGS := $(CFLAGS)
 
-CONFIGURE = CC="cc" CXX="g++" CPPFLAGS="" LDFLAGS="" \
-	$(CURDIR)/configure --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --includedir="\$${prefix}/include" \
-	--mandir="\$${prefix}/share/man" --infodir="\$${prefix}/share/info" --sysconfdir=/etc --localstatedir=/var \
-	--libexecdir="\$${prefix}/lib/$(package)" --disable-maintainer-mode --disable-dependency-tracking --srcdir=$(CURDIR) \
-	--enable-grub-emu
+with_check := no
 
-pre-build::
-	rm -f debian/files
+CC := gcc-4.4
 
-AUTOGEN_FILES = configure config.h.in conf/*.mk
+# Enable external modules from grub-extras.
+export GRUB_CONTRIB := $(CURDIR)/debian/grub-extras
 
-$(AUTOGEN_FILES): autogen.sh configure.ac conf/*.rmk
+confflags = CC=$(CC) TARGET_CC=$(CC) --enable-grub-mkfont --disable-grub-fstest
+
+# autogen.sh runs util/import_gcry.py after autoconf et al, so
+# conf/gcry.rmk's timestamp will be later and we need to disregard it.
+AUTOGEN_FILES = configure $(filter-out conf/gcry.mk,$(wildcard conf/*.mk)) debian/grub-extras/*/conf/*.mk
+AUTOGEN_DEB_FILES = examples manpages config templates preinst postinst postrm dirs install
+
+$(AUTOGEN_FILES): autogen.sh configure.ac $(filter-out conf/gcry.rmk,$(wildcard conf/*.rmk)) debian/grub-extras/*/conf/*.rmk
+	sed -i configure.ac -e "s/^AC_INIT.*/AC_INIT(\[GRUB\],\[$(deb_version)\],\[bug-grub@gnu.org\])/"
 	./autogen.sh
 
-configure/grub-pc configure/grub-ieee1275 configure/grub-efi configure/grub-linuxbios:: $(AUTOGEN_FILES)
-	mkdir -p $(subst configure/,build/,$@)
-	cd $(subst configure/,build/,$@) && $(CONFIGURE) --with-platform=$(subst configure/grub-,,$@)
+BUILD_PACKAGES := $(strip $(shell dh_listpackages))
+REAL_PACKAGES = grub-common grub-emu grub-pc grub-coreboot grub-efi-ia32 grub-efi-amd64 grub-ieee1275 grub-firmware-qemu grub-yeeloong
 
-configure/grub-common:: $(AUTOGEN_FILES)
-	mkdir -p build/grub-common
-	cd build/grub-common && $(CONFIGURE)
+%:
+	dh $@
 
-build/grub-pc build/grub-efi build/grub-ieee1275 build/grub-linuxbios::
-	$(MAKE) -C $@
+override_dh_auto_configure: $(patsubst %,configure/%,$(BUILD_PACKAGES))
 
-build/grub-rescue-pc:: build/grub-pc
-	mkdir -p $@
-	mkdir -p $@/rescue-disk/boot/grub
-	cp docs/grub.cfg $@/rescue-disk/boot/grub/
-	$(CURDIR)/build/grub-pc/grub-mkrescue \
-		--pkglibdir=$(CURDIR)/build/grub-pc \
+override_dh_auto_build: $(patsubst %,build/%,$(BUILD_PACKAGES))
+
+override_dh_auto_install: $(patsubst %,install/%,$(BUILD_PACKAGES))
+
+$(patsubst %,configure/%,$(REAL_PACKAGES)) :: configure/% : build/stamps/configure-%
+$(patsubst %,build/%,$(REAL_PACKAGES) grub-rescue-pc) :: build/% : build/stamps/build-%
+
+build/stamps/configure-%: package = $(subst build/stamps/configure-,,$@)
+build/stamps/configure-%: export DH_OPTIONS = -p$(package) -Bbuild/$(package)
+
+build/stamps/build-%: package = $(subst build/stamps/build-,,$@)
+build/stamps/build-%: export DH_OPTIONS = -p$(package) -Bbuild/$(package)
+
+install/%: package = $(subst install/,,$@)
+install/%: export DH_OPTIONS = -p$(package) -Bbuild/$(package)
+
+build/stamps/configure-grub-pc build/stamps/configure-grub-ieee1275 build/stamps/configure-grub-coreboot build/stamps/configure-grub-emu build/stamps/configure-grub-yeeloong: $(AUTOGEN_FILES)
+	mkdir -p build/stamps build/$(package)
+	dh_auto_configure -- $(confflags) --with-platform=$(subst grub-,,$(package))
+	touch $@
+
+# This name scheme leaves room for things like ia64 or amd32 someday
+build/stamps/configure-grub-efi-ia32: $(AUTOGEN_FILES)
+	mkdir -p build/stamps build/$(package)
+	dh_auto_configure -- $(confflags) --with-platform=efi --target=i386-pe --program-prefix=""
+	touch $@
+build/stamps/configure-grub-efi-amd64: $(AUTOGEN_FILES)
+	mkdir -p build/stamps $(subst build/stamps/configure-,build/,$@)
+	dh_auto_configure -- $(confflags) --with-platform=efi --target=amd64-pe --program-prefix=""
+	touch $@
+
+build/stamps/configure-grub-firmware-qemu: $(AUTOGEN_FILES)
+	mkdir -p build/stamps $(subst build/stamps/configure-,build/,$@)
+	dh_auto_configure -- $(confflags) --with-platform=qemu
+	touch $@
+
+build/stamps/configure-grub-common: $(AUTOGEN_FILES)
+	mkdir -p build/stamps $(subst build/stamps/configure-,build/,$@)
+	dh_auto_configure -- $(confflags)
+	touch $@
+
+build/stamps/build-grub-common build/stamps/build-grub-efi-ia32 build/stamps/build-grub-efi-amd64 build/stamps/build-grub-ieee1275 build/stamps/build-grub-coreboot build/stamps/build-grub-emu build/stamps/build-grub-yeeloong: build/stamps/build-%: build/stamps/configure-%
+	dh_auto_build
+	touch $@
+
+build/stamps/build-grub-pc: build/stamps/configure-grub-pc
+	dh_auto_build
+ifeq ($(with_check), yes)
+	dh_auto_test
+endif
+	touch $@
+
+build/stamps/build-grub-firmware-qemu: build/stamps/configure-grub-firmware-qemu
+	dh_auto_build
+	grub_dir=`mktemp -d` ; \
+	grub_memdisk=`mktemp` ; \
+	trap "rm -rf $${grub_dir} $${grub_memdisk}" EXIT HUP INT QUIT TERM ; \
+	mkdir -p $${grub_dir}/boot/grub ; \
+	cp debian/grub-firmware-qemu_grub.cfg $${grub_dir}/boot/grub/grub.cfg ; \
+	tar -cf - -C $${grub_dir} boot > $${grub_memdisk} ; \
+	$(CURDIR)/build/$(package)/grub-mkimage \
+		-O i386-qemu \
+		-d $(CURDIR)/build/$(package) \
+		$(CURDIR)/build/$(package)/*.mod \
+		-m $${grub_memdisk} \
+		-o $(CURDIR)/build/$(package)/grub.bin
+	touch $@
+
+build/stamps/build-grub-rescue-pc: build/stamps/build-grub-pc
+	mkdir -p build/grub-rescue-pc
+	cp -a build/grub-pc/grub-mkrescue build/grub-rescue-pc/grub-mkrescue
+	mkdir -p build/grub-rescue-pc/rescue-disk/boot/grub
+	cp docs/grub.cfg build/grub-rescue-pc/rescue-disk/boot/grub/
+	sed -i 's,^prefix=.*,prefix=$(CURDIR)/build/grub-rescue-pc,' \
+		build/grub-rescue-pc/grub-mkrescue
+	mkdir -p build/grub-rescue-pc/lib/grub
+	rm -rf build/grub-rescue-pc/lib/grub/i386-pc
+	cp -a build/grub-pc build/grub-rescue-pc/lib/grub/i386-pc
+	$(CURDIR)/build/grub-rescue-pc/grub-mkrescue \
 		--grub-mkimage=$(CURDIR)/build/grub-pc/grub-mkimage \
-		--overlay=$@/rescue-disk/ \
-		--image-type=floppy \
-		$(CURDIR)/$@/grub-rescue-floppy.img
-	$(CURDIR)/build/grub-pc/grub-mkrescue \
-		--pkglibdir=$(CURDIR)/build/grub-pc \
+		--output=$(CURDIR)/build/grub-rescue-pc/grub-rescue-cdrom.iso \
+		$(CURDIR)/build/grub-rescue-pc/rescue-disk
+	# save space for floppy image
+	rm -rf build/grub-rescue-pc/lib/grub/i386-pc/po
+	$(CURDIR)/build/grub-rescue-pc/grub-mkrescue \
 		--grub-mkimage=$(CURDIR)/build/grub-pc/grub-mkimage \
-		--overlay=$@/rescue-disk/ \
-		--image-type=cdrom \
-		$(CURDIR)/$@/grub-rescue-cdrom.iso
+		--output=$(CURDIR)/build/grub-rescue-pc/grub-rescue-floppy.img \
+		--diet \
+		$(CURDIR)/build/grub-rescue-pc/rescue-disk
+	touch $@
 
-build/grub-common::
-	# Yes, grub-mkdevicemap shouldn't really be here.  We're assuming 'pc'
-	# for i386 and 'ieee1275' for powerpc.  Not a big deal though.  See
-	# also debian/patches/04_run_grub_mkdevicemap_when_grub_probe_fails.diff
-	$(MAKE) -C $@ grub-probe grub-mkdevicemap
-
-install/grub-pc install/grub-efi install/grub-ieee1275 install/grub-linuxbios::
-	$(MAKE) -C $(subst install/,build/,$@) install DESTDIR=$(CURDIR)/debian/$(subst install/,,$@)/
-
-	# If liblzo2-dev >= 2.03 is installed, it means we're linking with it;  this makes sure
-	# the binary dependency is versioned (for license compatibility).
-	if dpkg --compare-versions `dpkg -s liblzo2-dev | sed -ne s/^Version:\ //p` ge 2.03 ; then \
-		echo "grub-pc:Depends=liblzo2-2 (>= 2.03)" > debian/grub-pc.substvars ; \
-	fi
+install/grub-pc install/grub-efi-ia32 install/grub-efi-amd64 install/grub-ieee1275 install/grub-coreboot install/grub-emu install/grub-yeeloong:
+	dh_auto_install --destdir=debian/$(package)
 
 	# shipped with grub-common
-	rm -f $(CURDIR)/debian/$(subst install/,,$@)/{usr/sbin/grub-{probe,mkdevicemap},usr/share/man/man8/grub-probe.8}
+	rm -rf $(CURDIR)/debian/$(package)/etc/grub.d
+	rm -f $(CURDIR)/debian/$(package)/usr/{sbin,share/man/man8}/{grub-dumpbios,grub-probe,grub-mkconfig,grub-mkdevicemap,grub-ofpathname}{,.8}
+	rm -f $(CURDIR)/debian/$(package)/usr/{bin,share/man/man1}/{grub-bin2h,grub-mkelfimage,grub-mkfont,grub-mkimage,grub-editenv,grub-mkrescue,grub-mkrelpath,grub-script-check,grub-mkpasswd-pbkdf2}{,.1}
+	rm -f $(CURDIR)/debian/$(package)/usr/lib/grub/{grub-mkconfig_lib,update-grub_lib}
+	rm -rf $(CURDIR)/debian/$(package)/usr/share/{grub,info,locale}/
+	rm -rf $(CURDIR)/debian/$(package)/usr/include
 
-	for i in docs ; do \
-		cp debian/$$i.in debian/$(subst install/,,$@).$$i ; \
+	if [ "$@" = "install/grub-emu" ] ; then \
+		rm -f $(CURDIR)/debian/$(package)/usr/{sbin,share/man/man8}/{grub-reboot,grub-set-default}{,.8} ; \
+	fi
+
+	if [ "$@" != "install/grub-emu" ] ; then \
+		for i in $(AUTOGEN_DEB_FILES) ; do \
+			sed debian/$$i.in \
+				-e "s/@PACKAGE@/$(package)/g" \
+				> debian/$(package).$$i ; \
+		done ; \
+	fi
+
+	# grub-pc is a bit special.  It includes a few overlays for autogen files.
+	if [ "$@" = "install/grub-pc" ] ; then \
+		for i in templates install dirs ; do \
+			cat debian/grub-pc.$$i.in >> debian/grub-pc.$$i ; \
+		done ; \
+	fi
+
+	mkdir -p $(CURDIR)/debian/$(package)/usr/share/lintian/overrides
+	echo "$(package): unstripped-binary-or-object *.mod" \
+		>> $(CURDIR)/debian/$(package)/usr/share/lintian/overrides/$(package)
+	cd $(CURDIR)/debian/$(package) && find ./usr/lib/grub -name kernel.img \
+		| sed -e "s%.*%$(package): statically-linked-binary &%g" \
+	>> $(CURDIR)/debian/$(package)/usr/share/lintian/overrides/$(package)
+	cd $(CURDIR)/debian/$(package) && find ./usr/lib/grub -name kernel.img \
+		| sed -e "s%.*%$(package): unstripped-binary-or-object &%g" \
+	>> $(CURDIR)/debian/$(package)/usr/share/lintian/overrides/$(package)
+	if [ "$@" = "install/grub-efi-amd64" ] && [ "$(DEB_HOST_ARCH_CPU)" = "i386" ] ; then \
+		echo "$(package): binary-from-other-architecture *.mod" \
+			>> $(CURDIR)/debian/$(package)/usr/share/lintian/overrides/$(package) ; \
+		cd $(CURDIR)/debian/$(package) && find ./usr/lib/grub -name kernel.img \
+			| sed -e "s%.*%$(package): binary-from-other-architecture &%g" \
+		>> $(CURDIR)/debian/$(package)/usr/share/lintian/overrides/$(package) ; \
+	fi
+	if [ "$@" = "install/grub-pc" ] && [ "$(DEB_HOST_ARCH_CPU)" = "i386" ] ; then \
+		echo "$(package): binary-from-other-architecture *efiemu64.o" \
+			>> $(CURDIR)/debian/$(package)/usr/share/lintian/overrides/$(package) ; \
+	fi
+
+install/grub-common:
+	dh_auto_install --destdir=debian/$(package)
+	rm -rf $(CURDIR)/debian/$(package)/usr/lib/grub/{i386,powerpc,sparc64,mips}-*
+	rm -f $(CURDIR)/debian/$(package)/usr/{sbin,share/man/man8}/{update-grub,grub-install,grub-setup,grub-reboot,grub-set-default}{,.8}
+	rm -f $(CURDIR)/debian/$(package)/usr/share/info/dir*
+
+override_dh_installdocs:
+	dh_installdocs -A AUTHORS NEWS README THANKS TODO
+
+override_dh_strip:
+	dh_strip -X/usr/bin/grub-emu
+
+override_dh_auto_clean:
+	-rm -rf build
+	sed -i configure.ac -e "s/^AC_INIT.*/AC_INIT(\[GRUB\],\[0\],\[bug-grub@gnu.org\]) dnl version is filled by debian\/rules/"
+
+override_dh_clean: debian/legacy/update-grub debian/grub-extras
+	dh_clean
+
+	chmod +x debian/{script,grub.d/*,legacy/*,kernel/*}
+
+	for i in $(AUTOGEN_DEB_FILES) ; do \
+		rm -f debian/grub-{pc,efi-*,ieee1275,coreboot,yeeloong}.$$i ; \
 	done
 
-	i=$(CURDIR)/debian/$(subst install/,,$@)/usr/lib/grub/*/kernel.elf ; if test -e $$i ; then strip -s $$i ; fi
+	# make sure PO files are always up-to-date
+	debconf-updatepo
 
-	mkdir -p $(CURDIR)/debian/$(subst install/,,$@)/usr/share/lintian/overrides
-	cd $(CURDIR)/debian/$(subst install/,,$@) && find ./usr/lib/grub -name \*.mod \
-		| sed -e "s%.*%$(subst install/,,$@): unstripped-binary-or-object &%g" \
-	> $(CURDIR)/debian/$(subst install/,,$@)/usr/share/lintian/overrides/$(subst install/,,$@)
-	cd $(CURDIR)/debian/$(subst install/,,$@) && find ./usr/lib/grub -name kernel.elf \
-		| sed -e "s%.*%$(subst install/,,$@): statically-linked-binary &%g" \
-	>> $(CURDIR)/debian/$(subst install/,,$@)/usr/share/lintian/overrides/$(subst install/,,$@)
+	# clean regenerated Catalan gmo
+	rm -f po/ca.gmo
 
-clean::
-	chmod +x debian/{script,grub.d/*,legacy/*}
-	-rm -f debian/grub-{pc,efi,ieee1275,linuxbios}.docs debian/grub-pc.substvars
-	-rm -rf build
+debian/legacy/update-grub:
+	@echo "Missing $@.  Try: \"bzr cat http://bzr.debian.org/bzr/pkg-grub/trunk/grub-legacy/debian/update-grub > $@\""
+	exit 1
 
+debian/grub-extras:
+	@echo "Missing $@.  Try: \"mkdir -p $@; for extra in 915resolution ntldr-img zfs; do bzr export $@/\$$extra http://bzr.savannah.nongnu.org/r/grub-extras/\$$extra; done\""
+	exit 1
+
+.PHONY: $(patsubst %,configure/%,$(BUILD_PACKAGES)) $(patsubst %,build/%,$(BUILD_PACKAGES)) $(patsubst %,install/%,$(BUILD_PACKAGES))

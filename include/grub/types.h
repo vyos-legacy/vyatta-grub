@@ -1,6 +1,6 @@
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2002,2005,2006,2007  Free Software Foundation, Inc.
+ *  Copyright (C) 2002,2005,2006,2007,2008,2009  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,8 +21,6 @@
 
 #include <config.h>
 #include <grub/cpu/types.h>
-
-#define UNUSED __attribute__ ((unused))
 
 #ifdef GRUB_UTIL
 # define GRUB_CPU_SIZEOF_VOID_P	SIZEOF_VOID_P
@@ -50,11 +48,19 @@
 # error "This architecture is not supported because sizeof(void *) != 4 and sizeof(void *) != 8"
 #endif
 
+#ifndef GRUB_TARGET_WORDSIZE
+# if GRUB_TARGET_SIZEOF_VOID_P == 4
+#  define GRUB_TARGET_WORDSIZE 32
+# elif GRUB_TARGET_SIZEOF_VOID_P == 8
+#  define GRUB_TARGET_WORDSIZE 64
+# endif
+#endif
+
 /* Define various wide integers.  */
 typedef signed char		grub_int8_t;
 typedef short			grub_int16_t;
 typedef int			grub_int32_t;
-#if GRUB_CPU_SIZEOF_VOID_P == 8
+#if GRUB_CPU_SIZEOF_LONG == 8
 typedef long			grub_int64_t;
 #else
 typedef long long		grub_int64_t;
@@ -63,7 +69,7 @@ typedef long long		grub_int64_t;
 typedef unsigned char		grub_uint8_t;
 typedef unsigned short		grub_uint16_t;
 typedef unsigned		grub_uint32_t;
-#if GRUB_CPU_SIZEOF_VOID_P == 8
+#if GRUB_CPU_SIZEOF_LONG == 8
 typedef unsigned long		grub_uint64_t;
 #else
 typedef unsigned long long	grub_uint64_t;
@@ -86,16 +92,38 @@ typedef grub_int32_t	grub_target_ssize_t;
 typedef grub_uint64_t	grub_addr_t;
 typedef grub_uint64_t	grub_size_t;
 typedef grub_int64_t	grub_ssize_t;
+
+# if GRUB_CPU_SIZEOF_LONG == 8
+#  define PRIxGRUB_SIZE	"lx"
+# else
+#  define PRIxGRUB_SIZE	"llx"
+# endif
 #else
 typedef grub_uint32_t	grub_addr_t;
 typedef grub_uint32_t	grub_size_t;
 typedef grub_int32_t	grub_ssize_t;
+
+# define PRIxGRUB_SIZE	"x"
 #endif
 
-#if GRUB_CPU_SIZEOF_VOID_P == 8
-# define ULONG_MAX 18446744073709551615UL
+#if GRUB_CPU_SIZEOF_LONG == 8
+# define GRUB_ULONG_MAX 18446744073709551615UL
+# define GRUB_LONG_MAX 9223372036854775807L
+# define GRUB_LONG_MIN (-9223372036854775807L - 1)
 #else
-# define ULONG_MAX 4294967295UL
+# define GRUB_ULONG_MAX 4294967295UL
+# define GRUB_LONG_MAX 2147483647L
+# define GRUB_LONG_MIN (-2147483647L - 1)
+#endif
+
+#if GRUB_CPU_SIZEOF_VOID_P == 4
+#define UINT_TO_PTR(x) ((void*)(grub_uint32_t)(x))
+#define PTR_TO_UINT64(x) ((grub_uint64_t)(grub_uint32_t)(x))
+#define PTR_TO_UINT32(x) ((grub_uint32_t)(x))
+#else
+#define UINT_TO_PTR(x) ((void*)(grub_uint64_t)(x))
+#define PTR_TO_UINT64(x) ((grub_uint64_t)(x))
+#define PTR_TO_UINT32(x) ((grub_uint32_t)(grub_uint64_t)(x))
 #endif
 
 /* The type for representing a file offset.  */
@@ -111,6 +139,17 @@ typedef grub_uint64_t	grub_disk_addr_t;
    (grub_uint16_t) ((_x << 8) | (_x >> 8)); \
 })
 
+#if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC__ > 4 || __GNUC_MINOR__ >= 3)
+static inline grub_uint32_t grub_swap_bytes32(grub_uint32_t x)
+{
+	return __builtin_bswap32(x);
+}
+
+static inline grub_uint64_t grub_swap_bytes64(grub_uint64_t x)
+{
+	return __builtin_bswap64(x);
+}
+#else					/* not gcc 4.3 or newer */
 #define grub_swap_bytes32(x)	\
 ({ \
    grub_uint32_t _x = (x); \
@@ -132,6 +171,7 @@ typedef grub_uint64_t	grub_disk_addr_t;
                     | ((_x & (grub_uint64_t) 0xFF000000000000ULL) >> 40) \
                     | (_x >> 56)); \
 })
+#endif					/* not gcc 4.3 or newer */
 
 #ifdef GRUB_CPU_WORDS_BIGENDIAN
 # define grub_cpu_to_le16(x)	grub_swap_bytes16(x)
@@ -146,21 +186,6 @@ typedef grub_uint64_t	grub_disk_addr_t;
 # define grub_be_to_cpu16(x)	((grub_uint16_t) (x))
 # define grub_be_to_cpu32(x)	((grub_uint32_t) (x))
 # define grub_be_to_cpu64(x)	((grub_uint64_t) (x))
-# ifdef GRUB_TARGET_WORDS_BIGENDIAN
-#  define grub_target_to_host16(x)	((grub_uint16_t) (x))
-#  define grub_target_to_host32(x)	((grub_uint32_t) (x))
-#  define grub_target_to_host64(x)	((grub_uint64_t) (x))
-#  define grub_host_to_target16(x)	((grub_uint16_t) (x))
-#  define grub_host_to_target32(x)	((grub_uint32_t) (x))
-#  define grub_host_to_target64(x)	((grub_uint64_t) (x))
-# else /* ! GRUB_TARGET_WORDS_BIGENDIAN */
-#  define grub_target_to_host16(x)	grub_swap_bytes16(x)
-#  define grub_target_to_host32(x)	grub_swap_bytes32(x)
-#  define grub_target_to_host64(x)	grub_swap_bytes64(x)
-#  define grub_host_to_target16(x)	grub_swap_bytes16(x)
-#  define grub_host_to_target32(x)	grub_swap_bytes32(x)
-#  define grub_host_to_target64(x)	grub_swap_bytes64(x)
-# endif
 #else /* ! WORDS_BIGENDIAN */
 # define grub_cpu_to_le16(x)	((grub_uint16_t) (x))
 # define grub_cpu_to_le32(x)	((grub_uint32_t) (x))
@@ -174,21 +199,6 @@ typedef grub_uint64_t	grub_disk_addr_t;
 # define grub_be_to_cpu16(x)	grub_swap_bytes16(x)
 # define grub_be_to_cpu32(x)	grub_swap_bytes32(x)
 # define grub_be_to_cpu64(x)	grub_swap_bytes64(x)
-# ifdef GRUB_TARGET_WORDS_BIGENDIAN
-#  define grub_target_to_host16(x)	grub_swap_bytes16(x)
-#  define grub_target_to_host32(x)	grub_swap_bytes32(x)
-#  define grub_target_to_host64(x)	grub_swap_bytes64(x)
-#  define grub_host_to_target16(x)	grub_swap_bytes16(x)
-#  define grub_host_to_target32(x)	grub_swap_bytes32(x)
-#  define grub_host_to_target64(x)	grub_swap_bytes64(x)
-# else /* ! GRUB_TARGET_WORDS_BIGENDIAN */
-#  define grub_target_to_host16(x)	((grub_uint16_t) (x))
-#  define grub_target_to_host32(x)	((grub_uint32_t) (x))
-#  define grub_target_to_host64(x)	((grub_uint64_t) (x))
-#  define grub_host_to_target16(x)	((grub_uint16_t) (x))
-#  define grub_host_to_target32(x)	((grub_uint32_t) (x))
-#  define grub_host_to_target64(x)	((grub_uint64_t) (x))
-# endif
 #endif /* ! WORDS_BIGENDIAN */
 
 #endif /* ! GRUB_TYPES_HEADER */

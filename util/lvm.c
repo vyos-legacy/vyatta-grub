@@ -1,7 +1,7 @@
 /* lvm.c - LVM support for GRUB utils.  */
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2006,2007  Free Software Foundation, Inc.
+ *  Copyright (C) 2006,2007,2008  Free Software Foundation, Inc.
  *
  *  GRUB is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,17 +26,19 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#define LVM_DEV_MAPPER_STRING "/dev/mapper/"
+
 int
 grub_util_lvm_isvolume (char *name)
 {
   char *devname;
   struct stat st;
   int err;
-  
-  devname = xmalloc (strlen (name) + 13);
 
-  strcpy (devname, "/dev/mapper/");
-  strcpy (devname+12, name);
+  devname = xmalloc (strlen (name) + sizeof (LVM_DEV_MAPPER_STRING));
+
+  strcpy (devname, LVM_DEV_MAPPER_STRING);
+  strcpy (devname + sizeof(LVM_DEV_MAPPER_STRING) - 1, name);
 
   err = stat (devname, &st);
   free (devname);

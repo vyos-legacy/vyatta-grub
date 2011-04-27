@@ -67,3 +67,4 @@ stamp-h1
 symlist.c
 update-grub
 update-grub_lib
+.pc
