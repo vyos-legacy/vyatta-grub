@@ -592,7 +592,16 @@ case "$1" in
 
     # If grub.cfg has been generated, update it.
     if test -e /boot/grub/grub.cfg ; then
-      update-grub 3>&-
+      # The Vyatta system generates its own grub.cfg file.  So, we check
+      # here to see if the original grub.cfg was saved in the pre-install
+      # phase of installing this package.  If so, we restore it back to
+      # its original location, over-writing the version just generated.
+      if [ -e /boot/grub/grub-install.orig.cfg ]; then
+	  echo "Restoring saved grub config file..."
+	  mv /boot/grub/grub-install.orig.cfg /boot/grub/grub.cfg
+      else
+          update-grub 3>&-
+      fi
     fi
   ;;
   abort-upgrade|abort-remove|abort-deconfigure)

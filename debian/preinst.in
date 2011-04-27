@@ -7,6 +7,13 @@ case "$1" in
        test -h /etc/kernel/postrm.d/zz-update-grub; then
       rm -f /etc/kernel/postrm.d/zz-update-grub
     fi
+
+    # Vyatta generates grub.cfg directly and installing an
+    # upgrade of grub would overwrite that. Make a copy
+    # and restore in postinst
+    if [ -e /boot/grub/grub.cfg ]; then
+	cp -p /boot/grub/grub.cfg /boot/grub/grub-install.orig.cfg
+    fi
     ;;
 esac
 
