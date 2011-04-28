@@ -3,8 +3,6 @@ Section: admin
 Priority: extra
 Maintainer: Vyatta Package Maintainers <maintainers@vyatta.com>
 Build-Depends: debhelper (>= 7.0.50~),
- quilt (>= 0.46-7),
- patchutils,
  autoconf,
  automake,
  python,
