@@ -1,0 +1,29 @@
+# standard debian build debris
+files
+*.debhelper
+*.substvars
+*.log
+*.docs
+*.templates
+*.manpages
+*.examples
+*.config
+*.dirs
+
+# derived install files
+*.postrm
+*.preinst
+*.postinst
+*.install
+
+# build targets
+grub2
+grub-common
+grub-efi
+grub-efi-ia32
+grub-efi-amd64
+grub-ieee1275
+grub-linuxbios
+grub-pc
+grub-rescue-pc
+
