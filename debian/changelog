@@ -1,3 +1,11 @@
+grub2 (1.98+20100804-14-vyatta2) unstable; urgency=low
+
+  * Don't run update-grub on kernel install
+  * Update list of derived files
+  * Don't update-grub when grub package is upgraded
+
+ -- Stephen Hemminger <stephen.hemminger@vyatta.com>  Thu, 05 May 2011 16:10:49 -0700
+
 grub2 (1.98+20100804-14-vyatta1) unstable; urgency=low
 
   * Update to Debian Squeeze version of grub
