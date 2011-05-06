@@ -10,7 +10,6 @@ Build-Depends: debhelper (>= 7.0.50~),
  flex (>= 2.5.35),
  bison,
  po-debconf,
- help2man,
  texinfo,
  gcc-4.4-multilib [i386 kopensolaris-i386 amd64 kfreebsd-amd64 sparc],
  gcc-4.4,
@@ -22,8 +21,6 @@ Build-Depends: debhelper (>= 7.0.50~),
  libdevmapper-dev [amd64 i386 powerpc mipsel sparc],
  libzfs-dev [kfreebsd-i386 kfreebsd-amd64],
  libnvpair-dev [kfreebsd-i386 kfreebsd-amd64],
- libsdl1.2-dev [!hurd-i386],
- xorriso (>= 0.5.6.pl00),
 Build-Conflicts: autoconf2.13 
 Standards-Version: 3.8.4
 Homepage: http://www.gnu.org/software/grub/
