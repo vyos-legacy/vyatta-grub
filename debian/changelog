@@ -1,3 +1,9 @@
+grub2 (1.98+20100804-14-vyatta5+pacifica2) unstable; urgency=low
+
+  * new branch
+
+ -- John Southworth <john.southworth@vyatta.com>  Fri, 12 Oct 2012 18:48:09 -0700
+
 grub2 (1.98+20100804-14-vyatta5+pacifica1) unstable; urgency=low
 
   * new branch
