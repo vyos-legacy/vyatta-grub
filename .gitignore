@@ -1,5 +1,4 @@
 .*.swp
-
 00_header
 10_hurd
 10_linux
@@ -45,3 +44,7 @@ symlist.c
 update-grub
 update-grub_lib
 .pc
+conf/gcry.mk
+conf/gcry.rmk
+configure.ac
+lib/libgcrypt-grub/cipher/ChangeLog
