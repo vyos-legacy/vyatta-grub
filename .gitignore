@@ -46,5 +46,4 @@ update-grub_lib
 .pc
 conf/gcry.mk
 conf/gcry.rmk
-configure.ac
 lib/libgcrypt-grub/cipher/ChangeLog
