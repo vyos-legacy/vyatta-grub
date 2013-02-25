@@ -1,3 +1,9 @@
+grub2 (1.98+20100804-14-vyatta8) unstable; urgency=low
+
+  * Force build
+
+ -- Sven-Thorsten Dietrich <sven@vyatta.com>  Mon, 25 Feb 2013 11:47:47 -0800
+
 grub2 (1.98+20100804-14-vyatta7) unstable; urgency=low
 
   * debian/control: Change package priorities from 'optional' to 'extra'
