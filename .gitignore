@@ -47,4 +47,3 @@ conf/gcry.mk
 conf/gcry.rmk
 lib/libgcrypt-grub/cipher/ChangeLog
 .pc
-
