@@ -1,3 +1,9 @@
+grub2 (1.98+20100804-14+vyos2+lithium2) unstable; urgency=low
+
+  * Update maintainer address
+
+ -- Alex Harpin <development@landsofshadow.co.uk>  Fri, 26 Dec 2014 11:09:08 +0000
+ 
 grub2 (1.98+20100804-14+vyos2+lithium1) unstable; urgency=low
 
   * New branch
