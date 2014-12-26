@@ -1,7 +1,7 @@
 Source: grub2
 Section: admin
 Priority: extra
-Maintainer: Vyatta Package Maintainers <maintainers@vyatta.com>
+Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
 Build-Depends: debhelper (>= 7.0.50~),
  autoconf,
  automake,
