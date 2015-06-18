@@ -7,7 +7,7 @@ upstream_version	:= $(shell echo $(deb_version) | sed -e "s/-[^-]*$$//")
 package		:= grub2
 
 DEB_HOST_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_CPU 2>/dev/null)
-DEB_DH_GENCONTROL_ARGS_ALL = $(shell if [ -f "../.VYATTA_DEV_BUILD" ]; then \
+DEB_DH_GENCONTROL_ARGS_ALL = $(shell if [ -f "../.VYOS_DEV_BUILD" ]; then \
                                        echo "-- -v999.dev"; fi)
 
 CFLAGS := -g -Wall
